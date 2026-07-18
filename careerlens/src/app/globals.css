@@ -1,26 +1,124 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Backgrounds */
+  --bg:           222 47% 6%;    /* #0D1117 — main background */
+  --card:         222 47% 9%;    /* #161B22 — card background */
+  --card-hover:   222 47% 12%;   /* hover state */
+  --card-border:  222 47% 18%;   /* #30363D — borders */
+
+  /* Text */
+  --text-primary: 210 40% 96%;   /* #F0F6FC — primary text */
+  --text-muted:   215 20% 55%;   /* #8B949E — secondary text */
+  --text-subtle:  215 15% 35%;   /* #4B5563 — disabled/placeholder */
+
+  /* Accents */
+  --violet:       262 83% 58%;   /* #7C3AED — primary CTA, interactive */
+  --violet-dim:   262 83% 58% / 0.12; /* backgrounds */
+  --amber:        38  92% 50%;   /* #F59E0B — scores, results */
+  --amber-dim:    38  92% 50% / 0.12;
+
+  /* Status */
+  --green:        160 84% 39%;   /* #10B981 — success, matched */
+  --green-dim:    160 84% 39% / 0.12;
+  --red:          0   84% 60%;   /* #F43F5E — error, missing */
+  --red-dim:      0   84% 60% / 0.12;
+  --blue:         217 91% 60%;   /* #3B82F6 — info, good match */
+  --blue-dim:     217 91% 60% / 0.12;
+
+  /* Radius mapping for design system (SPEC Section 9) */
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* Typography */
+  --font-inter: 'Inter', sans-serif;
+  --font-geist: 'Geist', monospace;
+
+  /* Weights */
+  --fw-normal:   400;
+  --fw-medium:   500;
+  --fw-semibold: 600;
+  --fw-bold:     700;
+  --fw-black:    800;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@theme {
+  --color-background: hsl(var(--bg));
+  --color-card: hsl(var(--card));
+  --color-card-hover: hsl(var(--card-hover));
+  --color-card-border: hsl(var(--card-border));
+  --color-text-primary: hsl(var(--text-primary));
+  --color-text-muted: hsl(var(--text-muted));
+  --color-text-subtle: hsl(var(--text-subtle));
+  --color-violet: hsl(var(--violet));
+  --color-violet-dim: hsl(var(--violet-dim));
+  --color-amber: hsl(var(--amber));
+  --color-amber-dim: hsl(var(--amber-dim));
+  --color-green: hsl(var(--green));
+  --color-green-dim: hsl(var(--green-dim));
+  --color-red: hsl(var(--red));
+  --color-red-dim: hsl(var(--red-dim));
+  --color-blue: hsl(var(--blue));
+  --color-blue-dim: hsl(var(--blue-dim));
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono: var(--font-geist), monospace;
+
+  --animate-pulse-border: pulse-border 2s ease-in-out infinite;
+  --animate-skeleton: skeleton 1.5s ease-in-out infinite;
+
+  @keyframes pulse-border {
+    0%, 100% { border-color: hsl(var(--card-border)); }
+    50% { border-color: hsl(var(--violet)); }
+  }
+  @keyframes skeleton {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+}
+
+/* Score number specifically */
+.score-number {
+  font-family: var(--font-geist);
+  font-size: 80px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;  /* prevents layout shift during animation */
+  letter-spacing: -4px;
+}
+
+/* Cards use border, not shadow */
+.card {
+  border: 1px solid var(--color-card-border);
+  background-color: var(--color-card);
+  border-radius: var(--radius);
+}
+
+/* Only exception: primary button glow */
+.btn-primary {
+  background-color: var(--color-violet);
+  color: #ffffff;
+  box-shadow: 0 0 20px hsl(var(--violet) / 0.3);
+  transition: all 0.2s ease-in-out;
+}
+.btn-primary:hover {
+  box-shadow: 0 0 32px hsl(var(--violet) / 0.5);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
