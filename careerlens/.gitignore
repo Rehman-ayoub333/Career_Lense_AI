@@ -3,7 +3,7 @@ node_modules/
 .pnp
 .pnp.js
 
-# Environment variables (CRITICAL — never commit)
+# Environment — NEVER COMMIT
 .env
 .env.local
 .env.development.local
@@ -18,29 +18,19 @@ build/
 # Vercel
 .vercel
 
-# TypeScript
-*.tsbuildinfo
-next-env.d.ts
+# Testing
+coverage/
 
-# OS
+# System
 .DS_Store
+*.pem
 Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
 
 # Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Testing
-coverage/
-.nyc_output
-
-# Bundle analyzer
-analyze/
-.next/analyze/
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts

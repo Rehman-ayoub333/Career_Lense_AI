@@ -1,14 +1,24 @@
-import React from 'react';
+import React from 'react'
 
 interface TagProps {
-  label: string;
-  variant?: 'green' | 'red' | 'amber' | 'blue' | 'default';
+  label: string
+  variant: 'match' | 'missing' | 'extra' | 'neutral'
 }
 
-export function Tag({ label, variant = 'default' }: TagProps) {
+const variantStyles: Record<TagProps['variant'], string> = {
+  match: 'border border-green/40 bg-green-dim text-green',
+  missing: 'border border-red/40 bg-red-dim text-red',
+  extra: 'border border-amber/40 bg-amber-dim text-amber',
+  neutral: 'border border-card-border bg-card text-text-muted',
+}
+
+export function Tag({ label, variant }: TagProps) {
   return (
-    <span data-testid="shared-tag" className={`tag-${variant}`}>
+    <span
+      data-testid={`tag-${variant}`}
+      className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium ${variantStyles[variant]}`}
+    >
       {label}
     </span>
-  );
+  )
 }
