@@ -9,7 +9,7 @@ export function DemoPreview() {
       <div className="rounded-[var(--radius-lg)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-5 sm:p-8">
         <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-2xl font-semibold text-text-primary">Here's what your analysis looks like</h2>
+            <h2 className="text-2xl font-semibold text-text-primary">Here&apos;s what your analysis looks like</h2>
             <p className="text-sm text-text-muted">This analysis took 11 seconds</p>
           </div>
           <Badge label="Good Match" variant="info" />

@@ -17,7 +17,7 @@ export function SkillTagsSkeleton() {
         <div
           key={i}
           className="h-6 rounded-full bg-card animate-skeleton"
-          style={{ width: `${60 + Math.random() * 60}px` }}
+          style={{ width: `${60 + i * 12}px` }}
         />
       ))}
     </div>
