@@ -23,31 +23,39 @@ const TABS = [
   { id: 'chat', label: 'Chat CV', testId: 'tab-chat' },
 ] as const
 
+type TabId = (typeof TABS)[number]['id']
+
 interface ResultsTabsProps {
   session: AnalysisSession
 }
 
 export function ResultsTabs({ session }: ResultsTabsProps) {
-  const [activeTab, setActiveTab] = useState<(typeof TABS)[number]['id']>('skills')
+  const [activeTab, setActiveTab] = useState<TabId>('skills')
 
   const panel = useMemo(() => {
     switch (activeTab) {
       case 'skills':
-        return <SkillsTab result={session.result} />
+        return <SkillsTab result={session.result} mode={session.mode} />
       case 'rewrite':
-        return <RewriteTab rewrite={session.rewrite} />
+        return (
+          <RewriteTab
+            rewrite={session.rewrite}
+            cvText={session.cvText}
+            jdText={session.jdText}
+          />
+        )
       case 'ats':
         return <ATSTab result={session.result} />
       case 'keywords':
         return <KeywordsTab result={session.result} />
       case 'salary':
-        return <SalaryTab result={session.result} />
+        return <SalaryTab result={session.result} mode={session.mode} />
       case 'interview':
         return <InterviewTab result={session.result} />
       case 'cover':
         return <CoverLetterTab coverLetter={session.coverLetter} />
       case 'chat':
-        return <ChatTab hasAnalysis />
+        return <ChatTab session={session} />
       default:
         return null
     }
@@ -55,24 +63,40 @@ export function ResultsTabs({ session }: ResultsTabsProps) {
 
   return (
     <div data-testid="results-tabs" className="space-y-4">
-      <div role="tablist" aria-label="Analysis results" className="flex flex-wrap gap-2">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            data-testid={tab.testId}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === tab.id}
-            className={`rounded-full px-3 py-2 text-xs font-semibold ${activeTab === tab.id ? 'bg-violet text-white' : 'border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] text-text-muted'}`}
-            onClick={() => setActiveTab(tab.id)}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div
+        role="tablist"
+        aria-label="Analysis results"
+        className="flex flex-wrap gap-2"
+      >
+        {TABS.map((tab) => {
+          const isActive = activeTab === tab.id
+          return (
+            <button
+              key={tab.id}
+              data-testid={tab.testId}
+              id={`tab-${tab.id}`}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              aria-controls={`panel-${tab.id}`}
+              onClick={() => setActiveTab(tab.id)}
+              className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
+                isActive
+                  ? 'bg-[hsl(var(--violet))] text-white'
+                  : 'border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] text-text-muted hover:text-text-primary'
+              }`}
+            >
+              {tab.label}
+            </button>
+          )
+        })}
       </div>
 
       <motion.div
         key={activeTab}
+        id={`panel-${activeTab}`}
+        role="tabpanel"
+        aria-labelledby={`tab-${activeTab}`}
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2 }}

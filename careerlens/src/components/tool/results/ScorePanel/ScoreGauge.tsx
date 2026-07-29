@@ -1,6 +1,6 @@
 'use client'
 
-import { motion, useMotionValue, useMotionValueEvent } from 'framer-motion'
+import { motion, useMotionValue, useMotionValueEvent, useSpring } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
 
 import { getScoreColor } from '@/utils/score-color'
@@ -10,16 +10,18 @@ interface ScoreGaugeProps {
 }
 
 export function ScoreGauge({ score }: ScoreGaugeProps) {
-  const animatedScore = useMotionValue(0)
-  const [displayedScore, setDisplayedScore] = useState(0)
-  const color = getScoreColor(score)
   const normalized = Math.max(0, Math.min(100, score))
+  const color = getScoreColor(score)
+  const springValue = useSpring(0, { damping: 30, stiffness: 80 })
+  const glowValue = useMotionValue(0)
+  const [displayedScore, setDisplayedScore] = useState(0)
 
   useEffect(() => {
-    animatedScore.set(normalized)
-  }, [animatedScore, normalized])
+    springValue.set(normalized)
+    glowValue.set(1)
+  }, [springValue, glowValue, normalized])
 
-  useMotionValueEvent(animatedScore, 'change', (latest) => {
+  useMotionValueEvent(springValue, 'change', (latest) => {
     setDisplayedScore(Math.round(latest))
   })
 
@@ -31,33 +33,48 @@ export function ScoreGauge({ score }: ScoreGaugeProps) {
       aria-valuemax={100}
       className="flex flex-col items-center"
     >
-      <svg width="180" height="90" viewBox="0 0 180 90" className="overflow-visible">
+      <svg width="180" height="100" viewBox="0 0 180 100" className="overflow-visible">
+        <defs>
+          <filter id="score-glow">
+            <feGaussianBlur stdDeviation="4" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+        {/* Background track */}
         <path
-          d="M 12 78 A 78 78 0 0 1 168 78"
+          d="M 12 82 A 78 78 0 0 1 168 82"
           fill="none"
           stroke="rgba(255,255,255,0.06)"
           strokeWidth="12"
           strokeLinecap="round"
         />
+        {/* Animated score arc with glow */}
         <motion.path
-          d="M 12 78 A 78 78 0 0 1 168 78"
+          d="M 12 82 A 78 78 0 0 1 168 82"
           fill="none"
           stroke={color}
           strokeWidth="12"
           strokeLinecap="round"
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: normalized / 100 }}
-          transition={{ duration: 1.5, ease: 'easeOut' }}
+          filter="url(#score-glow)"
+          initial={{ pathLength: 0, opacity: 0.5 }}
+          animate={{ pathLength: normalized / 100, opacity: 1 }}
+          transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
         />
       </svg>
 
-      <div
+      <motion.div
         data-testid="score-number"
-        className="mt-[-38px] text-[72px] leading-none"
+        className="mt-[-42px] text-[72px] leading-none"
         style={{ color, fontFamily: 'var(--font-geist)', fontVariantNumeric: 'tabular-nums' }}
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.6, delay: 0.3, ease: 'easeOut' }}
       >
         {displayedScore}
-      </div>
+      </motion.div>
     </div>
   )
 }

@@ -5,8 +5,8 @@ import React from 'react'
 
 export function DemoPreview() {
   return (
-    <section data-testid="demo-preview" className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:py-12">
-      <div className="rounded-[var(--radius-lg)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-5 sm:p-8">
+    <section id="demo-preview" data-testid="demo-preview" className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:py-12">
+      <div className="rounded-[var(--radius-lg)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-4 sm:p-8">
         <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-2xl font-semibold text-text-primary">Here&apos;s what your analysis looks like</h2>
@@ -36,21 +36,21 @@ export function DemoPreview() {
                   <span>Skills</span>
                   <span>78%</span>
                 </div>
-                <ProgressBar value={78} color="#3B82F6" />
+                <ProgressBar value={78} color="hsl(var(--blue))" />
               </div>
               <div>
                 <div className="mb-1 flex items-center justify-between text-xs text-text-muted">
                   <span>Experience</span>
                   <span>64%</span>
                 </div>
-                <ProgressBar value={64} color="#F59E0B" />
+                <ProgressBar value={64} color="hsl(var(--amber))" />
               </div>
               <div>
                 <div className="mb-1 flex items-center justify-between text-xs text-text-muted">
                   <span>Education</span>
                   <span>82%</span>
                 </div>
-                <ProgressBar value={82} color="#10B981" />
+                <ProgressBar value={82} color="hsl(var(--green))" />
               </div>
             </div>
           </div>

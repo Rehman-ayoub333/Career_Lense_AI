@@ -5,6 +5,10 @@ import React, { useRef, useState } from 'react'
 
 const MAX_FILE_SIZE = 4 * 1024 * 1024
 
+interface UploadZoneProps {
+  onTextExtracted: (text: string) => void
+}
+
 function validateFile(file: File): string | null {
   const allowed = ['pdf', 'docx', 'txt']
   const ext = file.name.split('.').pop()?.toLowerCase()
@@ -21,7 +25,7 @@ function validateFile(file: File): string | null {
   return null
 }
 
-export function UploadZone() {
+export function UploadZone({ onTextExtracted }: UploadZoneProps) {
   const inputRef = useRef<HTMLInputElement | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -48,16 +52,23 @@ export function UploadZone() {
         method: 'POST',
         body: formData,
       })
-      const payload = (await response.json()) as { success?: boolean; text?: string; wordCount?: number; message?: string }
+      const payload = (await response.json()) as {
+        success?: boolean
+        text?: string
+        wordCount?: number
+        message?: string
+      }
 
       if (!response.ok || !payload.success || !payload.text) {
         setStatusTone('error')
-        setStatusMessage(payload.message ?? 'Please upload a PDF, DOCX, or TXT file.')
+        setStatusMessage(payload.message ?? 'Could not read this file. Please paste your CV text below.')
         return
       }
 
+      // Pass extracted text up to AnalyzeTool so it populates the CV textarea.
+      onTextExtracted(payload.text)
       setStatusTone('success')
-      setStatusMessage(`✓ CV loaded · ${payload.wordCount ?? 0} words detected`)
+      setStatusMessage(`CV loaded · ${payload.wordCount ?? 0} words detected`)
     } catch {
       setStatusTone('error')
       setStatusMessage('Check your internet connection and try again.')
@@ -71,7 +82,14 @@ export function UploadZone() {
       data-testid="upload-zone"
       role="button"
       aria-label="Upload CV file"
+      tabIndex={0}
       onClick={() => inputRef.current?.click()}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          inputRef.current?.click()
+        }
+      }}
       onDragOver={(event) => {
         event.preventDefault()
         setIsDragging(true)
@@ -85,8 +103,10 @@ export function UploadZone() {
           void handleFile(file)
         }
       }}
-      className={`flex min-h-[140px] cursor-pointer flex-col items-center justify-center rounded-[var(--radius)] border border-dashed px-4 py-6 text-center transition ${
-        isLoading || isDragging ? 'border-violet bg-violet-dim' : 'border-[hsl(var(--card-border))] bg-[hsl(var(--card))]'
+      className={`flex min-h-[140px] cursor-pointer flex-col items-center justify-center rounded-[var(--radius)] border border-dashed px-4 py-6 text-center transition focus-visible:outline-2 focus-visible:outline-[hsl(var(--violet))] ${
+        isLoading || isDragging
+          ? 'border-[hsl(var(--violet))] bg-[hsl(var(--violet-dim))]'
+          : 'border-[hsl(var(--card-border))] bg-[hsl(var(--card))]'
       }`}
     >
       <input
@@ -99,15 +119,28 @@ export function UploadZone() {
           if (file) {
             void handleFile(file)
           }
+          // Reset so the same file can be re-uploaded
+          event.target.value = ''
         }}
       />
 
       <CloudUpload className="mb-2 h-8 w-8 text-text-muted" />
-      <div className="text-sm font-medium text-text-primary">Drop your CV here</div>
+      <div className="text-sm font-medium text-text-primary">
+        {isLoading ? 'Extracting text...' : 'Drop your CV here'}
+      </div>
       <div className="mt-1 text-xs text-text-muted">or click to browse · PDF, DOCX, TXT · Max 4MB</div>
+
       {statusMessage ? (
-        <div className={`mt-3 text-xs ${statusTone === 'success' ? 'text-green' : statusTone === 'error' ? 'text-red' : 'text-text-muted'}`}>
-          {statusMessage}
+        <div
+          className={`mt-3 text-xs ${
+            statusTone === 'success'
+              ? 'text-[hsl(var(--green))]'
+              : statusTone === 'error'
+                ? 'text-[hsl(var(--red))]'
+                : 'text-text-muted'
+          }`}
+        >
+          {statusTone === 'success' ? `✓ ${statusMessage}` : statusMessage}
         </div>
       ) : null}
     </div>

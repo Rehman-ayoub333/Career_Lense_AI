@@ -1,3 +1,5 @@
+'use client'
+
 import { Check, Copy } from 'lucide-react'
 import React, { useState } from 'react'
 
@@ -22,7 +24,7 @@ export function CopyButton({ textToCopy }: CopyButtonProps) {
     <button
       data-testid="shared-copy-button"
       type="button"
-      onClick={handleCopy}
+      onClick={() => void handleCopy()}
       className="inline-flex items-center gap-2 rounded-full border border-violet/40 bg-violet-dim px-3 py-2 text-xs font-semibold text-violet"
     >
       {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}

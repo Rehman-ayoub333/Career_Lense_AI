@@ -1,5 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server'
 
-export async function GET(req: NextRequest) {
-  return NextResponse.json({ success: true, message: 'GET /api/share TODO' });
+export async function GET() {
+  return NextResponse.json({
+    success: true,
+    message: 'Share cards are generated client-side. Use the Share button in the results panel.',
+  })
 }

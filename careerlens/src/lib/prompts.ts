@@ -92,13 +92,16 @@ SCHOLARSHIP_START
 ${jdText}
 SCHOLARSHIP_END
 
-Return ONLY this JSON:
+Return ONLY this JSON structure. Every field is required. Do not add fields. Do not omit fields.
 
 {
-  "score": <integer 0-100>,
+  "score": <integer 0-100, overall scholarship match>,
   "research_score": <integer 0-100, evidence of academic/research capability>,
   "leadership_score": <integer 0-100, leadership roles and community impact>,
   "academic_score": <integer 0-100, CGPA, institution, course relevance>,
+  "skills_score": 0,
+  "experience_score": 0,
+  "education_score": <same value as academic_score>,
   "verdict": "<one of: Weak Match | Partial Match | Good Match | Strong Match>",
   "verdict_note": "<one sentence, what the committee's first impression would be>",
   "key_actions": [
@@ -106,25 +109,28 @@ Return ONLY this JSON:
     "<second most important>",
     "<third most important>"
   ],
-  "strengths": ["<specific strength relevant to scholarship>"],
-  "gaps": ["<specific gap that weakens the application>"],
+  "skills_matched": ["<specific strength the CV demonstrates for this scholarship>", "<strength>", "<strength>"],
+  "skills_missing": ["<specific gap that weakens the application>", "<gap>", "<gap>"],
+  "skills_extra": [],
   "scholarship_specific_tips": [
     "<specific advice for this scholarship program, not generic>",
     "<another specific tip>",
     "<another specific tip>"
   ],
-  "keywords_present": ["<keyword>"],
-  "keywords_missing": ["<keyword>"],
+  "keywords_present": ["<keyword from scholarship description found in CV>"],
+  "keywords_missing": ["<important keyword from scholarship description not present in CV>"],
   "ats_checks": [
-    {"id": "research", "label": "Research experience evident", "status": "<pass|fail|warn>", "note": "<note>"},
-    {"id": "leadership", "label": "Leadership roles documented", "status": "<pass|fail|warn>", "note": "<note>"},
-    {"id": "motivation", "label": "Clear motivation/goals", "status": "<pass|fail|warn>", "note": "<note>"},
-    {"id": "academic", "label": "Academic achievements highlighted", "status": "<pass|fail|warn>", "note": "<note>"},
-    {"id": "international", "label": "International awareness shown", "status": "<pass|fail|warn>", "note": "<note>"},
-    {"id": "community", "label": "Community impact documented", "status": "<pass|fail|warn>", "note": "<note>"},
-    {"id": "language", "label": "Language skills clear", "status": "<pass|fail|warn>", "note": "<note>"},
-    {"id": "fit", "label": "Clear fit with program goals", "status": "<pass|fail|warn>", "note": "<note>"}
+    {"id": "research", "label": "Research experience evident", "status": "<pass|fail|warn>", "note": "<specific note>"},
+    {"id": "leadership", "label": "Leadership roles documented", "status": "<pass|fail|warn>", "note": "<specific note>"},
+    {"id": "motivation", "label": "Clear motivation/goals", "status": "<pass|fail|warn>", "note": "<specific note>"},
+    {"id": "academic", "label": "Academic achievements highlighted", "status": "<pass|fail|warn>", "note": "<specific note>"},
+    {"id": "international", "label": "International awareness shown", "status": "<pass|fail|warn>", "note": "<specific note>"},
+    {"id": "community", "label": "Community impact documented", "status": "<pass|fail|warn>", "note": "<specific note>"},
+    {"id": "language", "label": "Language skills clear", "status": "<pass|fail|warn>", "note": "<specific note>"},
+    {"id": "fit", "label": "Clear fit with program goals", "status": "<pass|fail|warn>", "note": "<specific note>"}
   ],
+  "salary_range": "N/A — Scholarship application",
+  "salary_context": "Salary estimation is not applicable for scholarship applications.",
   "interview_questions": [
     {"question": "<likely scholarship interview question>", "skill_tested": "<what it tests>", "tip": "<answer hint>"},
     {"question": "<question>", "skill_tested": "<skill>", "tip": "<tip>"},

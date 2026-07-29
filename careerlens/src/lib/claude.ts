@@ -1,15 +1,18 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { getFallbackPrompt } from './prompts';
 
+const DEFAULT_MODEL = 'claude-sonnet-4-6';
+const GEMINI_MODEL = 'gemini-2.0-flash';
+const MAX_TOKENS = 4096;
+const TEMPERATURE = 0; // Deterministic responses for structured JSON
+
 // Initialize the Anthropic client using the environment variable.
 // It will automatically pick up process.env.ANTHROPIC_API_KEY.
-export const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || '',
-});
-
-const DEFAULT_MODEL = 'claude-3-5-sonnet-20241022';
-const MAX_TOKENS = 2000;
-const TEMPERATURE = 0; // Deterministic responses for structured JSON
+const anthropic = process.env.ANTHROPIC_API_KEY
+  ? new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    })
+  : null;
 
 /**
  * Sends a prompt to Claude and returns the raw text response.
@@ -19,33 +22,105 @@ export async function callClaude(
   userPrompt: string,
   model = DEFAULT_MODEL
 ): Promise<string> {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    throw new Error('API_KEY_MISSING: ANTHROPIC_API_KEY environment variable is not defined.');
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  const geminiKey = process.env.GEMINI_API_KEY;
+
+  if (anthropicKey && anthropic) {
+    try {
+      const response = await anthropic.messages.create({
+        model,
+        max_tokens: MAX_TOKENS,
+        temperature: TEMPERATURE,
+        system: systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: userPrompt,
+          },
+        ],
+      });
+
+      const textContent = response.content.find((block) => block.type === 'text');
+      if (!textContent || !('text' in textContent)) {
+        throw new Error('AI_ERROR: Claude did not return any text content.');
+      }
+
+      return textContent.text;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (geminiKey) {
+        return callGemini(systemPrompt, userPrompt, GEMINI_MODEL);
+      }
+      throw new Error(`AI_CALL_FAILED: Anthropic API call failed - ${message}`);
+    }
   }
 
+  if (geminiKey) {
+    return callGemini(systemPrompt, userPrompt, model === DEFAULT_MODEL ? GEMINI_MODEL : model);
+  }
+
+  throw new Error('API_KEY_MISSING: No AI provider key found. Please set ANTHROPIC_API_KEY or GEMINI_API_KEY.');
+}
+
+async function callGemini(
+  systemPrompt: string,
+  userPrompt: string,
+  model = GEMINI_MODEL
+): Promise<string> {
+  const geminiKey = process.env.GEMINI_API_KEY;
+
+  if (!geminiKey) {
+    throw new Error('API_KEY_MISSING: GEMINI_API_KEY environment variable is not defined.');
+  }
+
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(geminiKey)}`;
+
   try {
-    const response = await anthropic.messages.create({
-      model,
-      max_tokens: MAX_TOKENS,
-      temperature: TEMPERATURE,
-      system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: userPrompt,
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        systemInstruction: {
+          parts: [{ text: systemPrompt }],
         },
-      ],
+        generationConfig: {
+          temperature: TEMPERATURE,
+          responseMimeType: 'application/json',
+        },
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: userPrompt }],
+          },
+        ],
+      }),
     });
 
-    const textContent = response.content.find((block) => block.type === 'text');
-    if (!textContent || !('text' in textContent)) {
-      throw new Error('AI_ERROR: Claude did not return any text content.');
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as { error?: { message?: string } } | null;
+      const detail = payload?.error?.message ?? response.statusText;
+      throw new Error(`AI_CALL_FAILED: Gemini API call failed - ${response.status} ${detail}`);
     }
 
-    return textContent.text;
+    const payload = (await response.json()) as {
+      candidates?: Array<{
+        content?: {
+          parts?: Array<{ text?: string }>;
+        };
+      }>;
+    };
+
+    const text = payload.candidates?.[0]?.content?.parts?.map((part) => part.text ?? '').join('')?.trim();
+    if (!text) {
+      throw new Error('AI_ERROR: Gemini did not return any text content.');
+    }
+
+    return text;
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`AI_CALL_FAILED: Anthropic API call failed - ${message}`);
+    throw new Error(`AI_CALL_FAILED: Gemini API call failed - ${message}`);
   }
 }
 

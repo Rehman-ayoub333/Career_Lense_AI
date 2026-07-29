@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { callClaudeJSON } from '@/lib/claude'
 import { ANALYSIS_SYSTEM_PROMPT, getJobAnalysisPrompt, getScholarshipAnalysisPrompt } from '@/lib/prompts'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { checkRateLimit, getAIRateLimitKey } from '@/lib/rate-limit'
 import { isValidAnalysisMode, validateTextInput } from '@/lib/validators'
 import type { AnalysisResult } from '@/types'
 
@@ -51,8 +51,7 @@ function isAnalysisResult(value: unknown): value is AnalysisResult {
 }
 
 export async function POST(req: NextRequest) {
-  const key = req.headers.get('x-forwarded-for') ?? 'analyze-local'
-  const rateLimit = checkRateLimit(key)
+  const rateLimit = checkRateLimit(getAIRateLimitKey(req))
 
   if (!rateLimit.allowed) {
     return NextResponse.json(

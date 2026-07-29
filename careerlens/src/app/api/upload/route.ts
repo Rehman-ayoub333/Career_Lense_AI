@@ -26,8 +26,8 @@ function getFileType(file: File): string {
 }
 
 export async function POST(req: NextRequest) {
-  const key = req.headers.get('x-forwarded-for') ?? 'upload-local'
-  const rateLimit = checkRateLimit(key)
+  const ip = req.headers.get('x-forwarded-for') ?? 'local'
+  const rateLimit = checkRateLimit(`upload:${ip}`)
 
   if (!rateLimit.allowed) {
     return NextResponse.json(

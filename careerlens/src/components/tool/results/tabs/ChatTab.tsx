@@ -1,7 +1,14 @@
-import { Send } from 'lucide-react'
+'use client'
+
+import { Loader2, Send } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 
-import { useChat } from '@/hooks/useChat'
+import type { AnalysisSession } from '@/types'
+
+interface ChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
 
 const QUICK_PROMPTS = [
   'What are my strongest skills?',
@@ -11,36 +18,79 @@ const QUICK_PROMPTS = [
 ]
 
 interface ChatTabProps {
-  hasAnalysis: boolean
+  session: AnalysisSession
 }
 
-export function ChatTab({ hasAnalysis }: ChatTabProps) {
-  const { status } = useChat()
-  const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([
-    { role: 'assistant', content: 'Run an analysis first to chat about your CV.' },
+export function ChatTab({ session }: ChatTabProps) {
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    { role: 'assistant', content: 'Ask me anything about your CV analysis. I have full context of your CV, the job description, and your match results.' },
   ])
   const [input, setInput] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
   const listRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages])
 
-  if (!hasAnalysis) {
-    return <div data-testid="chat-tab">Run an analysis first to chat about your CV.</div>
-  }
+  async function sendMessage(text: string) {
+    if (!text.trim() || isLoading) return
 
-  function handleSend() {
-    if (!input.trim()) return
-    setMessages((current) => [...current, { role: 'user', content: input.trim() }, { role: 'assistant', content: 'I can answer once the analysis context is available in the chat flow.' }])
+    const userMessage = text.trim()
     setInput('')
+    setMessages((current) => [...current, { role: 'user', content: userMessage }])
+    setIsLoading(true)
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: userMessage,
+          cvText: session.cvText,
+          jdText: session.jdText,
+          score: session.result.score,
+          missingSkills: session.result.skills_missing,
+          verdict: session.result.verdict,
+        }),
+      })
+
+      const payload = (await response.json()) as {
+        success?: boolean
+        reply?: string
+        message?: string
+      }
+
+      if (!response.ok || !payload.success || !payload.reply) {
+        setMessages((current) => [
+          ...current,
+          { role: 'assistant', content: payload.message ?? 'Something went wrong. Please try again.' },
+        ])
+        return
+      }
+
+      setMessages((current) => [...current, { role: 'assistant', content: payload.reply as string }])
+    } catch {
+      setMessages((current) => [
+        ...current,
+        { role: 'assistant', content: 'Check your internet connection and try again.' },
+      ])
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
     <div data-testid="chat-tab" className="space-y-3">
       <div className="flex flex-wrap gap-2">
         {QUICK_PROMPTS.map((prompt) => (
-          <button key={prompt} type="button" className="rounded-full border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] px-3 py-2 text-xs text-text-muted">
+          <button
+            key={prompt}
+            type="button"
+            disabled={isLoading}
+            onClick={() => void sendMessage(prompt)}
+            className="rounded-full border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] px-3 py-2 text-xs text-text-muted transition hover:text-text-primary disabled:opacity-50"
+          >
             {prompt}
           </button>
         ))}
@@ -49,11 +99,19 @@ export function ChatTab({ hasAnalysis }: ChatTabProps) {
       <div ref={listRef} className="max-h-72 space-y-2 overflow-auto rounded-lg border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-3">
         {messages.map((message, index) => (
           <div key={`${message.role}-${index}`} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${message.role === 'user' ? 'bg-violet text-white' : 'bg-card-hover text-text-primary'}`}>
+            <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${message.role === 'user' ? 'bg-[hsl(var(--violet))] text-white' : 'bg-[hsl(var(--card-hover))] text-text-primary'}`}>
               {message.content}
             </div>
           </div>
         ))}
+        {isLoading ? (
+          <div className="flex justify-start">
+            <div className="flex items-center gap-2 rounded-2xl bg-[hsl(var(--card-hover))] px-3 py-2 text-sm text-text-muted">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Thinking...
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="flex gap-2">
@@ -64,18 +122,25 @@ export function ChatTab({ hasAnalysis }: ChatTabProps) {
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
               event.preventDefault()
-              handleSend()
+              void sendMessage(input)
             }
           }}
-          className="flex-1 rounded-full border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] px-3 py-2 text-sm text-text-primary outline-none focus:border-violet"
+          disabled={isLoading}
+          className="flex-1 rounded-full border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] px-3 py-2 text-sm text-text-primary outline-none transition focus:border-[hsl(var(--violet))] disabled:opacity-50"
           placeholder="Ask a follow-up about your CV"
+          aria-label="Chat message"
         />
-        <button data-testid="chat-send" type="button" onClick={handleSend} className="rounded-full bg-violet px-3 py-2 text-white">
+        <button
+          data-testid="chat-send"
+          type="button"
+          disabled={isLoading || !input.trim()}
+          onClick={() => void sendMessage(input)}
+          aria-label="Send message"
+          className="rounded-full bg-[hsl(var(--violet))] px-3 py-2 text-white transition disabled:opacity-50"
+        >
           <Send className="h-4 w-4" />
         </button>
       </div>
-
-      <div className="text-xs text-text-muted">Chat status: {status}</div>
     </div>
   )
 }

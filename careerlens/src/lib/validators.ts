@@ -4,8 +4,10 @@ export function stripHtmlTags(value: string): string {
 
 export function sanitizeText(value: string, maxLength = 8000): string {
   const withoutTags = stripHtmlTags(value)
-  const printableOnly = withoutTags.replace(/[^\x20-\x7E\n\r\t]/g, ' ')
-  return printableOnly.trim().slice(0, maxLength)
+  // Allow Unicode letters/numbers (accented names, non-Latin scripts) while
+  // stripping control characters except whitespace.
+  const noControlChars = withoutTags.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ' ')
+  return noControlChars.trim().slice(0, maxLength)
 }
 
 export function isNonEmptyString(value: string): boolean {

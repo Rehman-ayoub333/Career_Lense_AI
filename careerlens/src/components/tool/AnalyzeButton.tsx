@@ -16,9 +16,9 @@ export function AnalyzeButton({ cvText, jdText, step, onClick }: AnalyzeButtonPr
       data-testid="analyze-button"
       type="button"
       disabled={disabled}
-      title={disabled ? 'Please upload your CV and paste a job description' : undefined}
+      title={disabled ? 'Enter at least 100 characters for CV and 50 for job description' : undefined}
       onClick={onClick}
-      className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-violet px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+      className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[hsl(var(--violet))] px-4 text-sm font-semibold text-white shadow-[0_0_20px_hsl(var(--violet)/0.3)] transition hover:shadow-[0_0_32px_hsl(var(--violet)/0.5)] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
     >
       <Sparkles className="h-4 w-4" />
       Analyze Match

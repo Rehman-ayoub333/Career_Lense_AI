@@ -6,7 +6,7 @@ type RateLimitEntry = {
 const buckets = new Map<string, RateLimitEntry>()
 
 const DEFAULT_WINDOW_MS = 60_000
-const DEFAULT_MAX_REQUESTS = 3
+const DEFAULT_MAX_REQUESTS = 10
 
 export function checkRateLimit(key: string, maxRequests = DEFAULT_MAX_REQUESTS, windowMs = DEFAULT_WINDOW_MS): { allowed: boolean; retryAfterMs: number } {
   const now = Date.now()
@@ -23,4 +23,14 @@ export function checkRateLimit(key: string, maxRequests = DEFAULT_MAX_REQUESTS, 
 
   existing.count += 1
   return { allowed: true, retryAfterMs: 0 }
+}
+
+/**
+ * Shared rate-limit key for all AI-consuming endpoints.
+ * One analysis = 3 API calls (analyze + rewrite + cover-letter).
+ * Limit of 10/minute allows ~3 full analyses plus a regeneration.
+ */
+export function getAIRateLimitKey(req: { headers: { get(name: string): string | null } }): string {
+  const ip = req.headers.get('x-forwarded-for') ?? 'local'
+  return `ai:${ip}`
 }

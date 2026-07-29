@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { callClaudeJSON } from '@/lib/claude'
 import { REWRITE_SYSTEM_PROMPT, getRewritePrompt } from '@/lib/prompts'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { checkRateLimit, getAIRateLimitKey } from '@/lib/rate-limit'
 import { validateTextInput } from '@/lib/validators'
 import type { RewriteResult } from '@/types'
 
@@ -12,8 +12,7 @@ const REWRITE_SCHEMA = `{
 }`
 
 export async function POST(req: NextRequest) {
-  const key = req.headers.get('x-forwarded-for') ?? 'rewrite-local'
-  const rateLimit = checkRateLimit(key)
+  const rateLimit = checkRateLimit(getAIRateLimitKey(req))
 
   if (!rateLimit.allowed) {
     return NextResponse.json(

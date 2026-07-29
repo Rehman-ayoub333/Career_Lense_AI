@@ -28,6 +28,11 @@ export function writeHistory(items: AnalysisSession[]): void {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
 }
 
+export function deleteFromHistory(id: string): void {
+  const items = readHistory()
+  writeHistory(items.filter((item) => item.id !== id))
+}
+
 export function clearHistory(): void {
   if (typeof window === 'undefined') {
     return
