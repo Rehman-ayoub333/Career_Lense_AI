@@ -10,11 +10,11 @@ interface UploadZoneProps {
 }
 
 function validateFile(file: File): string | null {
-  const allowed = ['pdf', 'docx', 'txt']
+  const allowed = ['pdf', 'txt']
   const ext = file.name.split('.').pop()?.toLowerCase()
 
   if (!ext || !allowed.includes(ext)) {
-    return 'Please upload a PDF, DOCX, or TXT file.'
+    return 'Please upload a PDF or TXT file.'
   }
 
   if (file.size > MAX_FILE_SIZE) {
@@ -103,16 +103,16 @@ export function UploadZone({ onTextExtracted }: UploadZoneProps) {
           void handleFile(file)
         }
       }}
-      className={`flex min-h-[140px] cursor-pointer flex-col items-center justify-center rounded-[var(--radius)] border border-dashed px-4 py-6 text-center transition focus-visible:outline-2 focus-visible:outline-[hsl(var(--violet))] ${
+      className={`flex min-h-[140px] cursor-pointer flex-col items-center justify-center rounded-[var(--radius)] border-2 border-dashed px-4 py-6 text-center transition-all duration-200 focus-visible:outline-2 focus-visible:outline-[hsl(var(--violet))] ${
         isLoading || isDragging
-          ? 'border-[hsl(var(--violet))] bg-[hsl(var(--violet-dim))]'
-          : 'border-[hsl(var(--card-border))] bg-[hsl(var(--card))]'
+          ? 'border-[hsl(var(--violet))] bg-[hsl(var(--violet-dim))] scale-[1.01]'
+          : 'border-[hsl(var(--card-border))] bg-[hsl(var(--card))] hover:border-[hsl(var(--text-subtle))] hover:bg-[hsl(var(--card-hover))]'
       }`}
     >
       <input
         ref={inputRef}
         type="file"
-        accept=".pdf,.docx,.txt"
+        accept=".pdf,.txt"
         hidden
         onChange={(event) => {
           const file = event.target.files?.[0]
@@ -128,7 +128,7 @@ export function UploadZone({ onTextExtracted }: UploadZoneProps) {
       <div className="text-sm font-medium text-text-primary">
         {isLoading ? 'Extracting text...' : 'Drop your CV here'}
       </div>
-      <div className="mt-1 text-xs text-text-muted">or click to browse · PDF, DOCX, TXT · Max 4MB</div>
+      <div className="mt-1 text-xs text-text-muted">or click to browse · PDF, TXT · Max 4MB</div>
 
       {statusMessage ? (
         <div

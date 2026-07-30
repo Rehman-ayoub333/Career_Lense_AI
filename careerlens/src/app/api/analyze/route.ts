@@ -25,6 +25,22 @@ const ANALYSIS_SCHEMA = `{
   "interview_questions": [{"question": "", "skill_tested": "", "tip": ""}]
 }`
 
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string')
+}
+
+function isATSCheck(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false
+  const c = value as Record<string, unknown>
+  return typeof c.id === 'string' && typeof c.label === 'string' && typeof c.status === 'string' && typeof c.note === 'string'
+}
+
+function isInterviewQuestion(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false
+  const c = value as Record<string, unknown>
+  return typeof c.question === 'string' && typeof c.skill_tested === 'string' && typeof c.tip === 'string'
+}
+
 function isAnalysisResult(value: unknown): value is AnalysisResult {
   if (!value || typeof value !== 'object') return false
 
@@ -37,16 +53,20 @@ function isAnalysisResult(value: unknown): value is AnalysisResult {
     typeof candidate.education_score === 'number' &&
     typeof candidate.verdict === 'string' &&
     typeof candidate.verdict_note === 'string' &&
-    Array.isArray(candidate.key_actions) &&
-    Array.isArray(candidate.skills_matched) &&
-    Array.isArray(candidate.skills_missing) &&
-    Array.isArray(candidate.skills_extra) &&
-    Array.isArray(candidate.keywords_present) &&
-    Array.isArray(candidate.keywords_missing) &&
+    isStringArray(candidate.key_actions) &&
+    isStringArray(candidate.skills_matched) &&
+    isStringArray(candidate.skills_missing) &&
+    isStringArray(candidate.skills_extra) &&
+    isStringArray(candidate.keywords_present) &&
+    isStringArray(candidate.keywords_missing) &&
     Array.isArray(candidate.ats_checks) &&
+    candidate.ats_checks.length > 0 &&
+    candidate.ats_checks.every(isATSCheck) &&
     typeof candidate.salary_range === 'string' &&
     typeof candidate.salary_context === 'string' &&
-    Array.isArray(candidate.interview_questions)
+    Array.isArray(candidate.interview_questions) &&
+    candidate.interview_questions.length > 0 &&
+    candidate.interview_questions.every(isInterviewQuestion)
   )
 }
 

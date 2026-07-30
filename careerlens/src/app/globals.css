@@ -137,6 +137,45 @@ body {
   color: hsl(var(--red));
 }
 
+/* Refined focus ring for all interactive elements */
+:focus-visible {
+  outline: 2px solid hsl(var(--violet));
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--card-border));
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--text-subtle));
+}
+
+/* Textarea and input polish */
+textarea,
+input[type="text"] {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--card-border)) transparent;
+}
+
+/* Selection color */
+::selection {
+  background-color: hsl(var(--violet) / 0.3);
+  color: hsl(var(--text-primary));
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;

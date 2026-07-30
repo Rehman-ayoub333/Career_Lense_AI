@@ -7,7 +7,6 @@ import { sanitizeText } from '@/lib/validators'
 const MAX_FILE_SIZE = 4 * 1024 * 1024
 const ALLOWED_TYPES = new Set([
   'application/pdf',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'text/plain',
 ])
 
@@ -19,7 +18,6 @@ function getFileType(file: File): string {
 
   const name = file.name.toLowerCase()
   if (name.endsWith('.pdf')) return 'application/pdf'
-  if (name.endsWith('.docx')) return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
   if (name.endsWith('.txt')) return 'text/plain'
 
   return ''
@@ -60,7 +58,7 @@ export async function POST(req: NextRequest) {
       {
         success: false,
         error: 'WRONG_TYPE',
-        message: 'Please upload a PDF, DOCX, or TXT file.',
+        message: 'Please upload a PDF or TXT file.',
       },
       { status: 400 }
     )
@@ -83,8 +81,6 @@ export async function POST(req: NextRequest) {
   try {
     if (mimeType === 'application/pdf') {
       extractedText = await extractTextFromPdf(buffer)
-    } else if (mimeType === 'text/plain') {
-      extractedText = new TextDecoder('utf-8').decode(buffer)
     } else {
       extractedText = new TextDecoder('utf-8').decode(buffer)
     }

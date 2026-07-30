@@ -54,8 +54,6 @@ export function ResultsTabs({ session }: ResultsTabsProps) {
         return <InterviewTab result={session.result} />
       case 'cover':
         return <CoverLetterTab coverLetter={session.coverLetter} />
-      case 'chat':
-        return <ChatTab session={session} />
       default:
         return null
     }
@@ -80,10 +78,10 @@ export function ResultsTabs({ session }: ResultsTabsProps) {
               aria-selected={isActive}
               aria-controls={`panel-${tab.id}`}
               onClick={() => setActiveTab(tab.id)}
-              className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
+              className={`rounded-full px-3 py-2 text-xs font-semibold transition-all duration-200 ${
                 isActive
-                  ? 'bg-[hsl(var(--violet))] text-white'
-                  : 'border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] text-text-muted hover:text-text-primary'
+                  ? 'bg-[hsl(var(--violet))] text-white shadow-[0_0_12px_hsl(var(--violet)/0.25)]'
+                  : 'border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] text-text-muted hover:text-text-primary hover:border-[hsl(var(--text-subtle))]'
               }`}
             >
               {tab.label}
@@ -92,18 +90,34 @@ export function ResultsTabs({ session }: ResultsTabsProps) {
         })}
       </div>
 
-      <motion.div
-        key={activeTab}
-        id={`panel-${activeTab}`}
+      {/* Non-chat tabs: mount/unmount normally with animation */}
+      {activeTab !== 'chat' ? (
+        <motion.div
+          key={activeTab}
+          id={`panel-${activeTab}`}
+          role="tabpanel"
+          aria-labelledby={`tab-${activeTab}`}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+          className="rounded-[var(--radius)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-4"
+        >
+          {panel}
+        </motion.div>
+      ) : null}
+
+      {/* Chat tab: always mounted, hidden when inactive, preserves conversation */}
+      <div
+        id="panel-chat"
         role="tabpanel"
-        aria-labelledby={`tab-${activeTab}`}
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.2 }}
-        className="rounded-[var(--radius)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-4"
+        aria-labelledby="tab-chat"
+        className={activeTab === 'chat'
+          ? 'rounded-[var(--radius)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-4'
+          : 'hidden'
+        }
       >
-        {panel}
-      </motion.div>
+        <ChatTab session={session} />
+      </div>
     </div>
   )
 }

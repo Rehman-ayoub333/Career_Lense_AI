@@ -7,9 +7,18 @@ const buckets = new Map<string, RateLimitEntry>()
 
 const DEFAULT_WINDOW_MS = 60_000
 const DEFAULT_MAX_REQUESTS = 10
+const CLEANUP_THRESHOLD = 100
 
 export function checkRateLimit(key: string, maxRequests = DEFAULT_MAX_REQUESTS, windowMs = DEFAULT_WINDOW_MS): { allowed: boolean; retryAfterMs: number } {
   const now = Date.now()
+
+  // Periodically purge expired entries to prevent unbounded growth
+  if (buckets.size > CLEANUP_THRESHOLD) {
+    for (const [k, v] of buckets) {
+      if (v.resetAt <= now) buckets.delete(k)
+    }
+  }
+
   const existing = buckets.get(key)
 
   if (!existing || existing.resetAt <= now) {

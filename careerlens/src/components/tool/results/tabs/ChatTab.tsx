@@ -129,6 +129,7 @@ export function ChatTab({ session }: ChatTabProps) {
           className="flex-1 rounded-full border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] px-3 py-2 text-sm text-text-primary outline-none transition focus:border-[hsl(var(--violet))] disabled:opacity-50"
           placeholder="Ask a follow-up about your CV"
           aria-label="Chat message"
+          maxLength={500}
         />
         <button
           data-testid="chat-send"

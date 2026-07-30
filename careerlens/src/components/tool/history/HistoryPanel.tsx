@@ -5,6 +5,7 @@ import { Clock, History, Trash2, X } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 
 import { Badge } from '@/components/shared/Badge'
+import { useFocusTrap } from '@/hooks/useFocusTrap'
 import { clearHistory, deleteFromHistory, readHistory } from '@/lib/history'
 import type { AnalysisSession, MatchVerdict } from '@/types'
 import { getScoreColor } from '@/utils/score-color'
@@ -45,6 +46,7 @@ function formatDate(iso: string): string {
 export function HistoryPanel({ onRestore }: HistoryPanelProps) {
   const [items, setItems] = useState<AnalysisSession[]>([])
   const [isOpen, setIsOpen] = useState(false)
+  const trapRef = useFocusTrap<HTMLDivElement>(isOpen)
 
   useEffect(() => {
     if (!isOpen) return
@@ -97,6 +99,10 @@ export function HistoryPanel({ onRestore }: HistoryPanelProps) {
             onClick={() => setIsOpen(false)}
           >
             <motion.div
+              ref={trapRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Analysis History"
               initial={{ opacity: 0, y: -12, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -12, scale: 0.98 }}
@@ -122,6 +128,7 @@ export function HistoryPanel({ onRestore }: HistoryPanelProps) {
                   <button
                     type="button"
                     onClick={() => setIsOpen(false)}
+                    aria-label="Close history"
                     className="rounded-full p-1 text-text-muted transition hover:text-text-primary"
                   >
                     <X className="h-4 w-4" />

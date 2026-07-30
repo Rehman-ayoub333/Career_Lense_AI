@@ -10,10 +10,6 @@ export function sanitizeText(value: string, maxLength = 8000): string {
   return noControlChars.trim().slice(0, maxLength)
 }
 
-export function isNonEmptyString(value: string): boolean {
-  return sanitizeText(value).length > 0
-}
-
 export function isValidAnalysisMode(value: unknown): value is 'job' | 'scholarship' {
   return value === 'job' || value === 'scholarship'
 }

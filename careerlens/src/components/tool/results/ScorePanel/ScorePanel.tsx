@@ -96,7 +96,7 @@ export function ScorePanel({ session, onNewAnalysis }: ScorePanelProps) {
             data-testid="new-analysis-button"
             type="button"
             onClick={onNewAnalysis}
-            className="rounded-full border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] px-3 py-2 text-sm font-semibold text-text-primary transition hover:bg-[hsl(var(--card-hover))]"
+            className="rounded-full border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] px-3 py-2 text-sm font-semibold text-text-primary transition-all duration-200 hover:bg-[hsl(var(--card-hover))] hover:border-[hsl(var(--text-subtle))] active:scale-[0.98]"
           >
             New Analysis
           </button>

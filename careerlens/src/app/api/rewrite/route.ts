@@ -11,6 +11,19 @@ const REWRITE_SCHEMA = `{
   "rewritten_bullets": [""]
 }`
 
+function isRewriteResult(value: unknown): value is RewriteResult {
+  if (!value || typeof value !== 'object') return false
+  const candidate = value as Record<string, unknown>
+  return (
+    Array.isArray(candidate.original_bullets) &&
+    candidate.original_bullets.length > 0 &&
+    candidate.original_bullets.every((b: unknown) => typeof b === 'string') &&
+    Array.isArray(candidate.rewritten_bullets) &&
+    candidate.rewritten_bullets.length > 0 &&
+    candidate.rewritten_bullets.every((b: unknown) => typeof b === 'string')
+  )
+}
+
 export async function POST(req: NextRequest) {
   const rateLimit = checkRateLimit(getAIRateLimitKey(req))
 
@@ -62,6 +75,17 @@ export async function POST(req: NextRequest) {
         setTimeout(() => reject(new Error('AI_TIMEOUT')), 25_000)
       }),
     ])
+
+    if (!isRewriteResult(result)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'AI_ERROR',
+          message: 'Our AI returned an incomplete rewrite. Please try again.',
+        },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({ success: true, data: result })
   } catch (error) {

@@ -57,6 +57,17 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  if (message.length > 500) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'VALIDATION_ERROR',
+        message: 'Message must be under 500 characters.',
+      },
+      { status: 400 }
+    )
+  }
+
   try {
     const prompt = getChatPrompt(
       String(cvText ?? '').slice(0, 1000),

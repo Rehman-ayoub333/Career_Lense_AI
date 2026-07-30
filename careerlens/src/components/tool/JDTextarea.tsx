@@ -14,14 +14,15 @@ const PLACEHOLDERS = {
 export function JDTextarea({ mode, value, onChange }: JDTextareaProps) {
   return (
     <div>
-      <label className="mb-2 block text-sm font-medium text-text-primary">
+      <label htmlFor="jd-textarea" className="mb-2 block text-sm font-medium text-text-primary">
         {mode === 'job' ? 'Job Description' : 'Scholarship Criteria'}
       </label>
       <textarea
+        id="jd-textarea"
         data-testid="jd-textarea"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="min-h-[200px] w-full rounded-[var(--radius)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] px-3 py-3 text-sm text-text-primary outline-none transition focus:border-violet"
+        className="min-h-[200px] w-full resize-y rounded-[var(--radius)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] px-3 py-3 text-sm leading-relaxed text-text-primary placeholder:text-text-subtle outline-none transition-colors duration-200 focus:border-[hsl(var(--violet))] focus:shadow-[0_0_0_1px_hsl(var(--violet)/0.3)]"
         placeholder={PLACEHOLDERS[mode]}
         maxLength={6000}
       />

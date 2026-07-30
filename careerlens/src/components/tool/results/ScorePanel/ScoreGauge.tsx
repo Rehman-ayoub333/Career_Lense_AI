@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, useMotionValue, useMotionValueEvent, useSpring } from 'framer-motion'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useId, useState } from 'react'
 
 import { getScoreColor } from '@/utils/score-color'
 
@@ -10,6 +10,7 @@ interface ScoreGaugeProps {
 }
 
 export function ScoreGauge({ score }: ScoreGaugeProps) {
+  const filterId = useId()
   const normalized = Math.max(0, Math.min(100, score))
   const color = getScoreColor(score)
   const springValue = useSpring(0, { damping: 30, stiffness: 80 })
@@ -31,11 +32,12 @@ export function ScoreGauge({ score }: ScoreGaugeProps) {
       aria-valuenow={score}
       aria-valuemin={0}
       aria-valuemax={100}
+      aria-label="Match score"
       className="flex flex-col items-center"
     >
       <svg width="180" height="100" viewBox="0 0 180 100" className="overflow-visible">
         <defs>
-          <filter id="score-glow">
+          <filter id={filterId}>
             <feGaussianBlur stdDeviation="4" result="blur" />
             <feMerge>
               <feMergeNode in="blur" />
@@ -58,7 +60,7 @@ export function ScoreGauge({ score }: ScoreGaugeProps) {
           stroke={color}
           strokeWidth="12"
           strokeLinecap="round"
-          filter="url(#score-glow)"
+          filter={`url(#${filterId})`}
           initial={{ pathLength: 0, opacity: 0.5 }}
           animate={{ pathLength: normalized / 100, opacity: 1 }}
           transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
@@ -67,8 +69,8 @@ export function ScoreGauge({ score }: ScoreGaugeProps) {
 
       <motion.div
         data-testid="score-number"
-        className="mt-[-42px] text-[72px] leading-none"
-        style={{ color, fontFamily: 'var(--font-geist)', fontVariantNumeric: 'tabular-nums' }}
+        className="mt-[-42px] text-[72px] font-black leading-none"
+        style={{ color, fontFamily: 'var(--font-geist)', fontVariantNumeric: 'tabular-nums', letterSpacing: '-2px' }}
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.6, delay: 0.3, ease: 'easeOut' }}

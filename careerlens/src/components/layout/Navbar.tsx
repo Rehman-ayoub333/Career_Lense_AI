@@ -20,7 +20,7 @@ export function Navbar() {
           </a>
           <a
             href="#analyze"
-            className="inline-flex h-8 items-center rounded-full bg-[hsl(var(--violet))] px-3 text-xs font-semibold text-white transition hover:shadow-[0_0_16px_hsl(var(--violet)/0.3)]"
+            className="inline-flex h-8 items-center rounded-full bg-[hsl(var(--violet))] px-3 text-xs font-semibold text-white transition-all duration-200 hover:shadow-[0_0_16px_hsl(var(--violet)/0.3)] active:scale-[0.96]"
           >
             Analyze Now
           </a>

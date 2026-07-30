@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Check, Download, Share2, X } from 'lucide-react'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 
+import { useFocusTrap } from '@/hooks/useFocusTrap'
 import type { AnalysisSession } from '@/types'
 import { getScoreColor } from '@/utils/score-color'
 
@@ -127,12 +128,10 @@ function drawScoreCard(canvas: HTMLCanvasElement, session: AnalysisSession): voi
     ctx.fillText(`${bar.value}%`, contentX + barWidth, contentY)
 
     contentY += 14
-    // Background bar
     ctx.beginPath()
     ctx.roundRect(contentX, contentY, barWidth, barHeight, barRadius)
     ctx.fillStyle = 'rgba(255,255,255,0.06)'
     ctx.fill()
-    // Value bar
     const valueWidth = Math.max(barRadius * 2, (barWidth * bar.value) / 100)
     ctx.beginPath()
     ctx.roundRect(contentX, contentY, valueWidth, barHeight, barRadius)
@@ -186,6 +185,7 @@ export function ShareCard({ session }: ShareCardProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const trapRef = useFocusTrap<HTMLDivElement>(isOpen)
 
   const renderCard = useCallback(() => {
     if (canvasRef.current) {
@@ -228,7 +228,6 @@ export function ShareCard({ session }: ShareCardProps) {
         window.setTimeout(() => setCopied(false), 2000)
       }
     } catch {
-      // Fallback: copy URL instead
       await navigator.clipboard.writeText(window.location.href)
       setCopied(true)
       window.setTimeout(() => setCopied(false), 2000)
@@ -258,6 +257,10 @@ export function ShareCard({ session }: ShareCardProps) {
             onClick={() => setIsOpen(false)}
           >
             <motion.div
+              ref={trapRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Share your score card"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -270,6 +273,7 @@ export function ShareCard({ session }: ShareCardProps) {
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
+                  aria-label="Close share dialog"
                   className="rounded-full p-1 text-text-muted transition hover:text-text-primary"
                 >
                   <X className="h-4 w-4" />
