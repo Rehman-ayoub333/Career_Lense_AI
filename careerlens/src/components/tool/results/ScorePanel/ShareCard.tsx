@@ -240,7 +240,7 @@ export function ShareCard({ session }: ShareCardProps) {
         data-testid="share-button"
         type="button"
         onClick={() => setIsOpen(true)}
-        className="inline-flex items-center justify-center gap-2 rounded-full border border-[hsl(var(--violet)/0.4)] bg-transparent px-3 py-2 text-sm font-semibold text-[hsl(var(--violet))] transition hover:bg-[hsl(var(--violet-dim))]"
+        className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[hsl(var(--violet)/0.3)] bg-transparent text-sm font-semibold text-[hsl(var(--violet))] transition-all duration-200 hover:bg-[hsl(var(--violet-dim))] active:scale-[0.98]"
       >
         <Share2 className="h-4 w-4" />
         Share Result
@@ -266,7 +266,7 @@ export function ShareCard({ session }: ShareCardProps) {
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.2 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-2xl space-y-4 rounded-[var(--radius-lg)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-4"
+              className="w-full max-w-2xl space-y-4 rounded-[var(--radius-lg)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-6 shadow-[var(--shadow-elevated)]"
             >
               <div className="flex items-center justify-between">
                 <div className="text-sm font-semibold text-text-primary">Share your score card</div>
@@ -292,7 +292,7 @@ export function ShareCard({ session }: ShareCardProps) {
                 <button
                   type="button"
                   onClick={handleDownloadPNG}
-                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-[hsl(var(--violet))] px-3 py-2 text-sm font-semibold text-white transition hover:shadow-[0_0_20px_hsl(var(--violet)/0.4)]"
+                  className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-full bg-[hsl(var(--violet))] text-sm font-semibold text-white transition-all duration-200 hover:shadow-[0_0_20px_hsl(var(--violet)/0.4)] active:scale-[0.98]"
                 >
                   <Download className="h-4 w-4" />
                   Download PNG
@@ -300,7 +300,7 @@ export function ShareCard({ session }: ShareCardProps) {
                 <button
                   type="button"
                   onClick={() => void handleCopyImage()}
-                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-[hsl(var(--card-border))] px-3 py-2 text-sm font-semibold text-text-primary transition hover:bg-[hsl(var(--card-hover))]"
+                  className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-full border border-[hsl(var(--card-border))] text-sm font-semibold text-text-primary transition-all duration-200 hover:bg-[hsl(var(--card-hover))] active:scale-[0.98]"
                 >
                   {copied ? (
                     <>

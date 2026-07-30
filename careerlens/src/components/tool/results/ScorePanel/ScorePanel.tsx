@@ -72,31 +72,37 @@ export function ScorePanel({ session, onNewAnalysis }: ScorePanelProps) {
   return (
     <aside
       data-testid="score-panel"
-      className="rounded-[var(--radius-lg)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-4 lg:sticky lg:top-20 lg:w-[300px]"
+      className="rounded-[var(--radius-lg)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-6 shadow-[var(--shadow-card)] lg:sticky lg:top-20 lg:w-[300px]"
     >
-      <div className="space-y-4">
+      <div className="space-y-6">
         <ScoreGauge score={result.score} />
 
-        <div>
-          <div data-testid="score-verdict" className="text-lg font-semibold text-text-primary">
+        <div className="text-center">
+          <div data-testid="score-verdict" className="text-lg font-bold text-text-primary">
             {result.verdict}
           </div>
-          <p className="mt-1 text-sm text-text-muted">{result.verdict_note}</p>
+          <p className="mt-1 text-sm leading-relaxed text-text-muted">{result.verdict_note}</p>
         </div>
+
+        <div className="h-px bg-[hsl(var(--card-border))]" />
 
         <BreakdownBars result={result} mode={mode} />
 
+        <div className="h-px bg-[hsl(var(--card-border))]" />
+
         <div>
-          <div className="mb-2 text-sm font-semibold text-text-primary">Key actions</div>
+          <div className="mb-3 text-xs font-semibold uppercase tracking-[0.1em] text-text-subtle">Key Actions</div>
           <KeyActions items={result.key_actions} />
         </div>
+
+        <div className="h-px bg-[hsl(var(--card-border))]" />
 
         <div className="grid gap-2">
           <button
             data-testid="new-analysis-button"
             type="button"
             onClick={onNewAnalysis}
-            className="rounded-full border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] px-3 py-2 text-sm font-semibold text-text-primary transition-all duration-200 hover:bg-[hsl(var(--card-hover))] hover:border-[hsl(var(--text-subtle))] active:scale-[0.98]"
+            className="h-10 rounded-full border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] text-sm font-semibold text-text-primary transition-all duration-200 hover:bg-[hsl(var(--card-hover))] hover:border-[hsl(var(--text-subtle))] active:scale-[0.98]"
           >
             New Analysis
           </button>
@@ -107,7 +113,7 @@ export function ScorePanel({ session, onNewAnalysis }: ScorePanelProps) {
             data-testid="download-button"
             type="button"
             onClick={handleDownload}
-            className="inline-flex items-center justify-center gap-2 rounded-full border border-[hsl(var(--card-border))] bg-transparent px-3 py-2 text-sm font-semibold text-text-muted transition hover:text-text-primary"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[hsl(var(--card-border))] bg-transparent text-sm font-medium text-text-muted transition-all duration-200 hover:border-[hsl(var(--text-subtle))] hover:text-text-primary active:scale-[0.98]"
           >
             <Download className="h-4 w-4" />
             Download Report

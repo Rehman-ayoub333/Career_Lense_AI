@@ -24,7 +24,7 @@ const cards = [
 
 export function FeatureCards() {
   return (
-    <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:py-12">
+    <section className="mx-auto max-w-6xl px-4 pb-12 sm:px-6 lg:pb-16">
       <div className="grid gap-4 md:grid-cols-3">
         {cards.map(({ icon: Icon, title, description }, index) => (
           <motion.article
@@ -33,12 +33,12 @@ export function FeatureCards() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-40px' }}
             transition={{ duration: 0.4, delay: index * 0.1, ease: 'easeOut' }}
-            className="group rounded-[var(--radius)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-6 transition hover:border-[hsl(var(--violet)/0.3)] hover:bg-[hsl(var(--card-hover))]"
+            className="group rounded-[var(--radius-lg)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-6 shadow-[var(--shadow-card)] transition-all duration-200 hover:border-[hsl(var(--violet)/0.3)] hover:shadow-[var(--shadow-elevated)]"
           >
-            <div className="mb-4 inline-flex rounded-full bg-[hsl(var(--violet-dim))] p-2.5 text-[hsl(var(--violet))] transition group-hover:bg-[hsl(var(--violet)/0.2)]">
+            <div className="mb-4 inline-flex rounded-[var(--radius)] bg-[hsl(var(--violet-dim))] p-2.5 text-[hsl(var(--violet))] transition-colors duration-200 group-hover:bg-[hsl(var(--violet)/0.18)]">
               <Icon className="h-5 w-5" />
             </div>
-            <h3 className="text-lg font-semibold text-text-primary">{title}</h3>
+            <h3 className="text-base font-semibold text-text-primary">{title}</h3>
             <p className="mt-2 text-sm leading-relaxed text-text-muted">{description}</p>
           </motion.article>
         ))}

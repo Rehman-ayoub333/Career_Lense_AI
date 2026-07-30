@@ -5,7 +5,7 @@
   --bg:           222 47% 6%;    /* #0D1117 — main background */
   --card:         222 47% 9%;    /* #161B22 — card background */
   --card-hover:   222 47% 12%;   /* hover state */
-  --card-border:  222 47% 18%;   /* #30363D — borders */
+  --card-border:  222 47% 16%;   /* subtle borders */
 
   /* Text */
   --text-primary: 210 40% 96%;   /* #F0F6FC — primary text */
@@ -14,24 +14,29 @@
 
   /* Accents */
   --violet:       262 83% 58%;   /* #7C3AED — primary CTA, interactive */
-  --violet-dim:   262 83% 58% / 0.12; /* backgrounds */
+  --violet-dim:   262 83% 58% / 0.10; /* backgrounds */
   --amber:        38  92% 50%;   /* #F59E0B — scores, results */
-  --amber-dim:    38  92% 50% / 0.12;
+  --amber-dim:    38  92% 50% / 0.10;
 
   /* Status */
   --green:        160 84% 39%;   /* #10B981 — success, matched */
-  --green-dim:    160 84% 39% / 0.12;
+  --green-dim:    160 84% 39% / 0.10;
   --red:          0   84% 60%;   /* #F43F5E — error, missing */
-  --red-dim:      0   84% 60% / 0.12;
+  --red-dim:      0   84% 60% / 0.10;
   --blue:         217 91% 60%;   /* #3B82F6 — info, good match */
-  --blue-dim:     217 91% 60% / 0.12;
+  --blue-dim:     217 91% 60% / 0.10;
 
   /* Border radius */
   --radius-sm: 6px;
-  --radius: 10px;
+  --radius: 12px;
   --radius-lg: 16px;
   --radius-xl: 24px;
   --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2);
+  --shadow-elevated: 0 2px 4px rgba(0,0,0,0.3), 0 8px 32px rgba(0,0,0,0.3);
+  --shadow-glow: 0 0 20px hsl(262 83% 58% / 0.15);
 
   /* Typography */
   --font-inter: 'Inter', sans-serif;
@@ -89,52 +94,16 @@
   }
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background-color: hsl(var(--bg));
   color: hsl(var(--text-primary));
   font-family: var(--font-inter), system-ui, sans-serif;
-}
-
-.score-number {
-  font-family: var(--font-geist);
-  font-size: 80px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -4px;
-}
-
-.card {
-  border: 1px solid hsl(var(--card-border));
-  background-color: hsl(var(--card));
-  border-radius: var(--radius);
-}
-
-.btn-primary {
-  background-color: hsl(var(--violet));
-  color: #ffffff;
-  box-shadow: 0 0 20px hsl(var(--violet) / 0.3);
-}
-
-.btn-primary:hover {
-  box-shadow: 0 0 32px hsl(var(--violet) / 0.5);
-}
-
-.btn-secondary {
-  background-color: hsl(var(--card));
-  border: 1px solid hsl(var(--card-border));
-  color: hsl(var(--text-primary));
-}
-
-.btn-ghost {
-  background: transparent;
-  border: 1px solid hsl(var(--violet));
-  color: hsl(var(--violet));
-}
-
-.btn-danger {
-  background-color: hsl(var(--red-dim));
-  border: 1px solid hsl(var(--red));
-  color: hsl(var(--red));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Refined focus ring for all interactive elements */
@@ -177,10 +146,13 @@ input[type="text"] {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
   * {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
   }
 }

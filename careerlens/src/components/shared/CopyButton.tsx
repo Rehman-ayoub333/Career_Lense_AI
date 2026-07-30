@@ -25,9 +25,9 @@ export function CopyButton({ textToCopy }: CopyButtonProps) {
       data-testid="shared-copy-button"
       type="button"
       onClick={() => void handleCopy()}
-      className="inline-flex items-center gap-2 rounded-full border border-violet/40 bg-violet-dim px-3 py-2 text-xs font-semibold text-violet"
+      className="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--card-border))] bg-[hsl(var(--bg))] px-3 py-1.5 text-xs font-medium text-text-muted transition-all duration-200 hover:border-[hsl(var(--text-subtle))] hover:text-text-primary"
     >
-      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+      {copied ? <Check className="h-3.5 w-3.5 text-[hsl(var(--green))]" /> : <Copy className="h-3.5 w-3.5" />}
       {copied ? 'Copied' : 'Copy'}
     </button>
   )

@@ -48,9 +48,9 @@ export function AnalyzeTool() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: 'easeOut' }}
-        className="mx-auto max-w-6xl px-4 py-8 sm:px-6"
+        className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:py-12"
       >
-        <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
+        <div className="grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
           <ScorePanel session={session} onNewAnalysis={handleReset} />
           <ResultsTabs session={session} />
         </div>
@@ -63,26 +63,28 @@ export function AnalyzeTool() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: 'easeOut' }}
-      className="mx-auto max-w-6xl px-4 py-8 sm:px-6"
+      className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:py-12"
     >
-      <div className="rounded-[var(--radius-lg)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-4 sm:p-6">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="rounded-[var(--radius-lg)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-4 shadow-[var(--shadow-card)] sm:p-6">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <ModeSelector mode={mode} onModeChange={setMode} />
           <HistoryPanel onRestore={restoreSession} />
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-4">
             <UploadZone onTextExtracted={setCvText} />
             <CVTextarea value={cvText} onChange={setCvText} />
           </div>
-          <div className="space-y-4">
+          <div className="flex flex-col gap-4">
             <JDTextarea mode={mode} value={jdText} onChange={setJdText} />
-            <AnalyzeButton cvText={cvText} jdText={jdText} step={step} onClick={handleAnalyze} />
+            <div className="mt-auto">
+              <AnalyzeButton cvText={cvText} jdText={jdText} step={step} onClick={handleAnalyze} />
+            </div>
             {error ? (
               <div
                 role="alert"
-                className="rounded-[var(--radius)] border border-[hsl(var(--red)/0.4)] bg-[hsl(var(--red-dim))] px-3 py-2 text-sm text-[hsl(var(--red))]"
+                className="rounded-[var(--radius)] border border-[hsl(var(--red)/0.3)] bg-[hsl(var(--red-dim))] px-4 py-3 text-sm text-[hsl(var(--red))]"
               >
                 {error}
               </div>

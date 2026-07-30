@@ -64,7 +64,7 @@ export function ResultsTabs({ session }: ResultsTabsProps) {
       <div
         role="tablist"
         aria-label="Analysis results"
-        className="flex flex-wrap gap-2"
+        className="flex flex-wrap gap-1.5"
       >
         {TABS.map((tab) => {
           const isActive = activeTab === tab.id
@@ -78,10 +78,10 @@ export function ResultsTabs({ session }: ResultsTabsProps) {
               aria-selected={isActive}
               aria-controls={`panel-${tab.id}`}
               onClick={() => setActiveTab(tab.id)}
-              className={`rounded-full px-3 py-2 text-xs font-semibold transition-all duration-200 ${
+              className={`rounded-full px-3.5 py-2 text-xs font-semibold transition-all duration-200 ${
                 isActive
-                  ? 'bg-[hsl(var(--violet))] text-white shadow-[0_0_12px_hsl(var(--violet)/0.25)]'
-                  : 'border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] text-text-muted hover:text-text-primary hover:border-[hsl(var(--text-subtle))]'
+                  ? 'bg-[hsl(var(--violet))] text-white shadow-[0_0_16px_hsl(var(--violet)/0.25)]'
+                  : 'border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] text-text-muted hover:border-[hsl(var(--text-subtle))] hover:text-text-primary'
               }`}
             >
               {tab.label}
@@ -100,7 +100,7 @@ export function ResultsTabs({ session }: ResultsTabsProps) {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2 }}
-          className="rounded-[var(--radius)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-4"
+          className="rounded-[var(--radius-lg)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-6 shadow-[var(--shadow-card)]"
         >
           {panel}
         </motion.div>
@@ -112,7 +112,7 @@ export function ResultsTabs({ session }: ResultsTabsProps) {
         role="tabpanel"
         aria-labelledby="tab-chat"
         className={activeTab === 'chat'
-          ? 'rounded-[var(--radius)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-4'
+          ? 'rounded-[var(--radius-lg)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-6 shadow-[var(--shadow-card)]'
           : 'hidden'
         }
       >

@@ -82,7 +82,7 @@ export function HistoryPanel({ onRestore }: HistoryPanelProps) {
       <button
         type="button"
         onClick={handleOpen}
-        className="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] px-3 py-2 text-xs font-semibold text-text-muted transition hover:text-text-primary"
+        className="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--card-border))] bg-[hsl(var(--bg))] px-3.5 py-2 text-xs font-medium text-text-muted transition-all duration-200 hover:border-[hsl(var(--text-subtle))] hover:text-text-primary"
       >
         <History className="h-3.5 w-3.5" />
         History
@@ -108,7 +108,7 @@ export function HistoryPanel({ onRestore }: HistoryPanelProps) {
               exit={{ opacity: 0, y: -12, scale: 0.98 }}
               transition={{ duration: 0.2 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-lg rounded-[var(--radius-lg)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] shadow-2xl"
+              className="w-full max-w-lg rounded-[var(--radius-lg)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] shadow-[var(--shadow-elevated)]"
             >
               <div className="flex items-center justify-between border-b border-[hsl(var(--card-border))] px-4 py-3">
                 <div className="flex items-center gap-2 text-sm font-semibold text-text-primary">

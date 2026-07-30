@@ -1,6 +1,6 @@
 'use client'
 
-import { CloudUpload } from 'lucide-react'
+import { CheckCircle2, CloudUpload, Loader2 } from 'lucide-react'
 import React, { useRef, useState } from 'react'
 
 const MAX_FILE_SIZE = 4 * 1024 * 1024
@@ -65,7 +65,6 @@ export function UploadZone({ onTextExtracted }: UploadZoneProps) {
         return
       }
 
-      // Pass extracted text up to AnalyzeTool so it populates the CV textarea.
       onTextExtracted(payload.text)
       setStatusTone('success')
       setStatusMessage(`CV loaded · ${payload.wordCount ?? 0} words detected`)
@@ -103,10 +102,10 @@ export function UploadZone({ onTextExtracted }: UploadZoneProps) {
           void handleFile(file)
         }
       }}
-      className={`flex min-h-[140px] cursor-pointer flex-col items-center justify-center rounded-[var(--radius)] border-2 border-dashed px-4 py-6 text-center transition-all duration-200 focus-visible:outline-2 focus-visible:outline-[hsl(var(--violet))] ${
+      className={`flex cursor-pointer flex-col items-center justify-center rounded-[var(--radius)] border-2 border-dashed px-4 py-8 text-center transition-all duration-200 ${
         isLoading || isDragging
-          ? 'border-[hsl(var(--violet))] bg-[hsl(var(--violet-dim))] scale-[1.01]'
-          : 'border-[hsl(var(--card-border))] bg-[hsl(var(--card))] hover:border-[hsl(var(--text-subtle))] hover:bg-[hsl(var(--card-hover))]'
+          ? 'border-[hsl(var(--violet))] bg-[hsl(var(--violet-dim))]'
+          : 'border-[hsl(var(--card-border))] bg-[hsl(var(--bg))] hover:border-[hsl(var(--text-subtle))] hover:bg-[hsl(var(--card))]'
       }`}
     >
       <input
@@ -119,20 +118,26 @@ export function UploadZone({ onTextExtracted }: UploadZoneProps) {
           if (file) {
             void handleFile(file)
           }
-          // Reset so the same file can be re-uploaded
           event.target.value = ''
         }}
       />
 
-      <CloudUpload className="mb-2 h-8 w-8 text-text-muted" />
+      {isLoading ? (
+        <Loader2 className="mb-2 h-6 w-6 animate-spin text-[hsl(var(--violet))]" />
+      ) : statusTone === 'success' ? (
+        <CheckCircle2 className="mb-2 h-6 w-6 text-[hsl(var(--green))]" />
+      ) : (
+        <CloudUpload className="mb-2 h-6 w-6 text-text-subtle" />
+      )}
+
       <div className="text-sm font-medium text-text-primary">
-        {isLoading ? 'Extracting text...' : 'Drop your CV here'}
+        {isLoading ? 'Extracting text...' : 'Drop your CV here or click to browse'}
       </div>
-      <div className="mt-1 text-xs text-text-muted">or click to browse · PDF, TXT · Max 4MB</div>
+      <div className="mt-1 text-xs text-text-subtle">PDF or TXT · Max 4 MB</div>
 
       {statusMessage ? (
         <div
-          className={`mt-3 text-xs ${
+          className={`mt-3 text-xs font-medium ${
             statusTone === 'success'
               ? 'text-[hsl(var(--green))]'
               : statusTone === 'error'

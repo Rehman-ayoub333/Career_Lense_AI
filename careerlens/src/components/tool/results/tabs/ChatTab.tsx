@@ -1,6 +1,6 @@
 'use client'
 
-import { Loader2, Send } from 'lucide-react'
+import { Loader2, MessageSquare, Send } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 
 import type { AnalysisSession } from '@/types'
@@ -12,7 +12,7 @@ interface ChatMessage {
 
 const QUICK_PROMPTS = [
   'What are my strongest skills?',
-  "What's the biggest gap for this role?",
+  "What's the biggest gap?",
   'How should I position myself?',
   'What should I learn first?',
 ]
@@ -81,7 +81,8 @@ export function ChatTab({ session }: ChatTabProps) {
   }
 
   return (
-    <div data-testid="chat-tab" className="space-y-3">
+    <div data-testid="chat-tab" className="flex flex-col gap-3">
+      {/* Quick prompts */}
       <div className="flex flex-wrap gap-2">
         {QUICK_PROMPTS.map((prompt) => (
           <button
@@ -89,31 +90,56 @@ export function ChatTab({ session }: ChatTabProps) {
             type="button"
             disabled={isLoading}
             onClick={() => void sendMessage(prompt)}
-            className="rounded-full border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] px-3 py-2 text-xs text-text-muted transition hover:text-text-primary disabled:opacity-50"
+            className="rounded-full border border-[hsl(var(--card-border))] bg-[hsl(var(--bg))] px-3 py-1.5 text-xs text-text-muted transition-all duration-200 hover:border-[hsl(var(--text-subtle))] hover:text-text-primary disabled:opacity-50"
           >
             {prompt}
           </button>
         ))}
       </div>
 
-      <div ref={listRef} className="max-h-72 space-y-2 overflow-auto rounded-[var(--radius)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-3">
+      {/* Messages */}
+      <div
+        ref={listRef}
+        className="flex max-h-[400px] min-h-[200px] flex-col gap-3 overflow-auto rounded-[var(--radius)] border border-[hsl(var(--card-border))] bg-[hsl(var(--bg))] p-4"
+      >
         {messages.map((message, index) => (
-          <div key={`${message.role}-${index}`} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${message.role === 'user' ? 'bg-[hsl(var(--violet))] text-white' : 'bg-[hsl(var(--card-hover))] text-text-primary'}`}>
-              {message.content}
-            </div>
+          <div
+            key={`${message.role}-${index}`}
+            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+          >
+            {message.role === 'assistant' ? (
+              <div className="flex max-w-[85%] gap-2.5">
+                <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--violet-dim))]">
+                  <MessageSquare className="h-3 w-3 text-[hsl(var(--violet))]" />
+                </div>
+                <div className="rounded-2xl rounded-tl-md bg-[hsl(var(--card))] px-4 py-2.5 text-sm leading-relaxed text-text-primary">
+                  {message.content}
+                </div>
+              </div>
+            ) : (
+              <div className="max-w-[85%] rounded-2xl rounded-tr-md bg-[hsl(var(--violet))] px-4 py-2.5 text-sm leading-relaxed text-white">
+                {message.content}
+              </div>
+            )}
           </div>
         ))}
+
         {isLoading ? (
           <div className="flex justify-start">
-            <div className="flex items-center gap-2 rounded-2xl bg-[hsl(var(--card-hover))] px-3 py-2 text-sm text-text-muted">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Thinking...
+            <div className="flex gap-2.5">
+              <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--violet-dim))]">
+                <MessageSquare className="h-3 w-3 text-[hsl(var(--violet))]" />
+              </div>
+              <div className="flex items-center gap-2 rounded-2xl rounded-tl-md bg-[hsl(var(--card))] px-4 py-2.5 text-sm text-text-muted">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Thinking...
+              </div>
             </div>
           </div>
         ) : null}
       </div>
 
+      {/* Input */}
       <div className="flex gap-2">
         <input
           data-testid="chat-input"
@@ -126,8 +152,8 @@ export function ChatTab({ session }: ChatTabProps) {
             }
           }}
           disabled={isLoading}
-          className="flex-1 rounded-full border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] px-3 py-2 text-sm text-text-primary outline-none transition-colors duration-200 focus:border-[hsl(var(--violet))] focus:shadow-[0_0_0_1px_hsl(var(--violet)/0.3)] disabled:opacity-50"
-          placeholder="Ask a follow-up about your CV"
+          className="flex-1 rounded-full border border-[hsl(var(--card-border))] bg-[hsl(var(--bg))] px-4 py-2.5 text-sm text-text-primary outline-none transition-all duration-200 focus:border-[hsl(var(--violet))] focus:shadow-[0_0_0_3px_hsl(var(--violet)/0.1)] disabled:opacity-50"
+          placeholder="Ask about your analysis..."
           aria-label="Chat message"
           maxLength={500}
         />
@@ -137,7 +163,7 @@ export function ChatTab({ session }: ChatTabProps) {
           disabled={isLoading || !input.trim()}
           onClick={() => void sendMessage(input)}
           aria-label="Send message"
-          className="rounded-full bg-[hsl(var(--violet))] px-3 py-2 text-white transition disabled:opacity-50"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--violet))] text-white transition-all duration-200 hover:shadow-[0_0_16px_hsl(var(--violet)/0.3)] disabled:opacity-50 disabled:shadow-none active:scale-[0.95]"
         >
           <Send className="h-4 w-4" />
         </button>
