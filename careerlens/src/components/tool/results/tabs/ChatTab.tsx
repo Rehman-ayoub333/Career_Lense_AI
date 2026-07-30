@@ -96,7 +96,7 @@ export function ChatTab({ session }: ChatTabProps) {
         ))}
       </div>
 
-      <div ref={listRef} className="max-h-72 space-y-2 overflow-auto rounded-lg border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-3">
+      <div ref={listRef} className="max-h-72 space-y-2 overflow-auto rounded-[var(--radius)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-3">
         {messages.map((message, index) => (
           <div key={`${message.role}-${index}`} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${message.role === 'user' ? 'bg-[hsl(var(--violet))] text-white' : 'bg-[hsl(var(--card-hover))] text-text-primary'}`}>
@@ -126,7 +126,7 @@ export function ChatTab({ session }: ChatTabProps) {
             }
           }}
           disabled={isLoading}
-          className="flex-1 rounded-full border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] px-3 py-2 text-sm text-text-primary outline-none transition focus:border-[hsl(var(--violet))] disabled:opacity-50"
+          className="flex-1 rounded-full border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] px-3 py-2 text-sm text-text-primary outline-none transition-colors duration-200 focus:border-[hsl(var(--violet))] focus:shadow-[0_0_0_1px_hsl(var(--violet)/0.3)] disabled:opacity-50"
           placeholder="Ask a follow-up about your CV"
           aria-label="Chat message"
           maxLength={500}

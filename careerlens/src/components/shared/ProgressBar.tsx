@@ -13,7 +13,7 @@ export function ProgressBar({ value, color, animated = true }: ProgressBarProps)
   const clamped = Math.max(0, Math.min(100, value))
 
   return (
-    <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/5">
+    <div className="h-1.5 w-full overflow-hidden rounded-full bg-[hsl(var(--card-border))]">
       <motion.div
         data-testid="shared-progress-bar"
         initial={animated ? { width: 0 } : undefined}

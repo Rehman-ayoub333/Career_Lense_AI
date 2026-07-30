@@ -13,7 +13,7 @@ export function CoverLetterTab({ coverLetter }: CoverLetterTabProps) {
         <div className="text-sm text-text-muted">{coverLetter.split(/\s+/).filter(Boolean).length} words</div>
         <CopyButton textToCopy={coverLetter} />
       </div>
-      <pre className="whitespace-pre-wrap rounded-lg border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-4 text-sm text-text-primary">{coverLetter}</pre>
+      <div className="whitespace-pre-wrap rounded-[var(--radius)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-4 font-sans text-sm leading-relaxed text-text-primary">{coverLetter}</div>
     </div>
   )
 }

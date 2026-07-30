@@ -1,12 +1,22 @@
+'use client'
+
+import { motion } from 'framer-motion'
+import React from 'react'
+
 import { Badge } from '@/components/shared/Badge'
 import { ProgressBar } from '@/components/shared/ProgressBar'
 import { Tag } from '@/components/shared/Tag'
-import React from 'react'
 
 export function DemoPreview() {
   return (
     <section id="demo-preview" data-testid="demo-preview" className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:py-12">
-      <div className="rounded-[var(--radius-lg)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-4 sm:p-8">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-60px' }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
+        className="rounded-[var(--radius-lg)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-4 sm:p-8"
+      >
         <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-2xl font-semibold text-text-primary">Here&apos;s what your analysis looks like</h2>
@@ -55,7 +65,7 @@ export function DemoPreview() {
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     </section>
   )
 }

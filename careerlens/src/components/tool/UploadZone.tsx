@@ -140,7 +140,7 @@ export function UploadZone({ onTextExtracted }: UploadZoneProps) {
                 : 'text-text-muted'
           }`}
         >
-          {statusTone === 'success' ? `✓ ${statusMessage}` : statusMessage}
+          {statusMessage}
         </div>
       ) : null}
     </div>
