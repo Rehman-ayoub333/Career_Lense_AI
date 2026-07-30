@@ -1,112 +1,55 @@
-import { NextRequest, NextResponse } from 'next/server'
-
-import { callClaude } from '@/lib/claude'
+import { generateText } from '@/lib/ai'
+import { AI_TIMEOUT_MS, INPUT_LIMITS, ROUTE_MAX_DURATION_SECONDS } from '@/lib/analysis/constants'
+import type { ChatResponse } from '@/lib/api/contract'
+import { createApiRoute, readJsonBody } from '@/lib/api/route'
 import { CHAT_SYSTEM_PROMPT, getChatPrompt } from '@/lib/prompts'
-import { checkRateLimit, getAIRateLimitKey } from '@/lib/rate-limit'
+import { checkAiRateLimit } from '@/lib/rate-limit'
+import { parseObjectBody, parseStringArray, parseTextField, sanitizeText } from '@/lib/validators'
 
-export async function POST(req: NextRequest) {
-  const rateLimit = checkRateLimit(getAIRateLimitKey(req))
+export const runtime = 'nodejs'
+export const maxDuration = ROUTE_MAX_DURATION_SECONDS
 
-  if (!rateLimit.allowed) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'RATE_LIMIT',
-        message: 'Too many requests. Please wait 30 seconds.',
-      },
-      { status: 429 }
-    )
-  }
+/**
+ * Context sent with each chat turn.
+ *
+ * Trimmed deliberately: the full CV would be re-sent on every message, which
+ * multiplies input tokens across a conversation for little added answer quality.
+ * These windows keep the model grounded while holding the per-turn cost flat.
+ */
+const CHAT_CONTEXT_LIMITS = { cv: 3000, jd: 1500 } as const
 
-  let body: unknown
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'VALIDATION_ERROR',
-        message: 'Invalid JSON body supplied.',
-      },
-      { status: 400 }
-    )
-  }
+export const POST = createApiRoute<ChatResponse>({
+  name: 'chat',
+  timeoutMs: AI_TIMEOUT_MS.chat,
+  rateLimit: { check: checkAiRateLimit, scope: 'ai' },
 
-  if (!body || typeof body !== 'object') {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'VALIDATION_ERROR',
-        message: 'Request body must be a JSON object.',
-      },
-      { status: 400 }
-    )
-  }
+  async handler(request, { signal }) {
+    const body = parseObjectBody(await readJsonBody(request))
 
-  const candidate = body as Record<string, unknown>
-  const { message, cvText, jdText, score, missingSkills, verdict } = candidate
+    const question = parseTextField(body.message, {
+      label: 'question',
+      min: INPUT_LIMITS.chatMessage.min,
+      max: INPUT_LIMITS.chatMessage.max,
+    })
 
-  if (typeof message !== 'string' || !message.trim()) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'VALIDATION_ERROR',
-        message: 'Message is required.',
-      },
-      { status: 400 }
-    )
-  }
-
-  if (message.length > 500) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'VALIDATION_ERROR',
-        message: 'Message must be under 500 characters.',
-      },
-      { status: 400 }
-    )
-  }
-
-  try {
-    const prompt = getChatPrompt(
-      String(cvText ?? '').slice(0, 1000),
-      String(jdText ?? '').slice(0, 500),
-      typeof score === 'number' ? score : 0,
-      Array.isArray(missingSkills) ? (missingSkills as string[]) : [],
-      String(verdict ?? ''),
-      message.trim()
-    )
-
-    const reply = await Promise.race([
-      callClaude(CHAT_SYSTEM_PROMPT, prompt),
-      new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('AI_TIMEOUT')), 15_000)
+    const reply = await generateText({
+      label: 'chat',
+      system: CHAT_SYSTEM_PROMPT,
+      user: getChatPrompt({
+        cvText: sanitizeText(String(body.cvText ?? ''), CHAT_CONTEXT_LIMITS.cv),
+        jdText: sanitizeText(String(body.jdText ?? ''), CHAT_CONTEXT_LIMITS.jd),
+        score: typeof body.score === 'number' && Number.isFinite(body.score) ? body.score : 0,
+        verdict: sanitizeText(String(body.verdict ?? ''), 40),
+        missingSkills: parseStringArray(body.missingSkills, 20),
+        question,
       }),
-    ])
+      temperature: 0.5,
+      // Two to three sentences. A tight ceiling also caps the cost of the
+      // highest-frequency endpoint in the app.
+      maxOutputTokens: 512,
+      signal,
+    })
 
-    return NextResponse.json({ success: true, reply })
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unexpected server error.'
-
-    if (errorMessage === 'AI_TIMEOUT') {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'TIMEOUT',
-          message: 'Chat response took too long. Please try again.',
-        },
-        { status: 503 }
-      )
-    }
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'AI_ERROR',
-        message: errorMessage,
-      },
-      { status: 500 }
-    )
-  }
-}
+    return { reply: reply.trim() }
+  },
+})

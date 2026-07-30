@@ -1,43 +1,79 @@
-import { motion } from 'framer-motion'
-import React from 'react'
+'use client'
 
-import { ProgressBar } from '@/components/shared/ProgressBar'
+import { motion } from 'framer-motion'
+
+import { LabelledMeter } from '@/components/ui/Feedback'
+import { MOTION } from '@/config/design-tokens'
 import type { AnalysisMode, AnalysisResult } from '@/types'
 
-interface BreakdownBarsProps {
-  result: AnalysisResult
-  mode: AnalysisMode
+interface Row {
+  label: string
+  value: number
+  colorVar: string
+  valueTestId: string
 }
 
-export function BreakdownBars({ result, mode }: BreakdownBarsProps) {
-  const rows =
-    mode === 'scholarship'
-      ? [
-          { label: 'Research', value: result.research_score ?? 0, color: 'hsl(var(--blue))', testId: 'breakdown-research' },
-          { label: 'Leadership', value: result.leadership_score ?? 0, color: 'hsl(var(--violet))', testId: 'breakdown-leadership' },
-          { label: 'Academic', value: result.academic_score ?? 0, color: 'hsl(var(--green))', testId: 'breakdown-academic' },
-        ]
-      : [
-          { label: 'Skills', value: result.skills_score, color: 'hsl(var(--blue))', testId: 'breakdown-skills' },
-          { label: 'Experience', value: result.experience_score, color: 'hsl(var(--amber))', testId: 'breakdown-experience' },
-          { label: 'Education', value: result.education_score, color: 'hsl(var(--green))', testId: 'breakdown-education' },
-        ]
+function rowsFor(result: AnalysisResult, mode: AnalysisMode): Row[] {
+  if (mode === 'scholarship') {
+    return [
+      {
+        label: 'Research',
+        value: result.research_score ?? 0,
+        colorVar: 'hsl(var(--blue))',
+        valueTestId: 'breakdown-research',
+      },
+      {
+        label: 'Leadership',
+        value: result.leadership_score ?? 0,
+        colorVar: 'hsl(var(--violet))',
+        valueTestId: 'breakdown-leadership',
+      },
+      {
+        label: 'Academic',
+        value: result.academic_score ?? 0,
+        colorVar: 'hsl(var(--green))',
+        valueTestId: 'breakdown-academic',
+      },
+    ]
+  }
 
+  return [
+    {
+      label: 'Skills',
+      value: result.skills_score,
+      colorVar: 'hsl(var(--blue))',
+      valueTestId: 'breakdown-skills',
+    },
+    {
+      label: 'Experience',
+      value: result.experience_score,
+      colorVar: 'hsl(var(--amber))',
+      valueTestId: 'breakdown-experience',
+    },
+    {
+      label: 'Education',
+      value: result.education_score,
+      colorVar: 'hsl(var(--green))',
+      valueTestId: 'breakdown-education',
+    },
+  ]
+}
+
+export function BreakdownBars({ result, mode }: { result: AnalysisResult; mode: AnalysisMode }) {
   return (
     <div className="space-y-4" data-testid="breakdown-bars">
-      {rows.map((row, index) => (
+      {rowsFor(result, mode).map((row, index) => (
         <motion.div
           key={row.label}
           initial={{ opacity: 0, x: -12 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.4, delay: 0.6 + index * 0.15, ease: 'easeOut' }}
-          className="space-y-2"
+          transition={{
+            duration: MOTION.duration.base,
+            delay: index * MOTION.stagger,
+            ease: MOTION.easeOut,
+          }}
         >
-          <div className="flex items-center justify-between text-xs text-text-muted">
-            <span>{row.label}</span>
-            <span data-testid={row.testId}>{row.value}%</span>
-          </div>
-          <ProgressBar value={row.value} color={row.color} animated />
+          <LabelledMeter {...row} />
         </motion.div>
       ))}
     </div>

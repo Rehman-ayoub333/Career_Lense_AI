@@ -1,14 +1,20 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import React, { useState } from 'react'
+import { Sparkles } from 'lucide-react'
+import { useState } from 'react'
 
-import { LOADING_COPY, useAnalysis } from '@/hooks/useAnalysis'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
+import { Container } from '@/components/ui/Container'
+import { Alert } from '@/components/ui/Feedback'
+import { TextareaField } from '@/components/ui/Textarea'
+import { MOTION } from '@/config/design-tokens'
+import { LOADING_STEPS, useAnalysis } from '@/hooks/useAnalysis'
+import { INPUT_LIMITS } from '@/lib/analysis/constants'
+import type { AnalysisMode } from '@/types'
 
-import { AnalyzeButton } from './AnalyzeButton'
-import { CVTextarea } from './CVTextarea'
 import { HistoryPanel } from './history/HistoryPanel'
-import { JDTextarea } from './JDTextarea'
 import { LoadingOverlay } from './LoadingOverlay'
 import { ModeSelector } from './ModeSelector'
 import { UploadZone } from './UploadZone'
@@ -21,77 +27,115 @@ const DEMO_CV =
 const DEMO_JD =
   'We are looking for a strong frontend engineer with React, TypeScript, UI performance optimization, and experience shipping production web applications. Candidate should be comfortable with accessible interfaces, API integration, and working across product and engineering teams.'
 
+const JD_LABELS: Record<AnalysisMode, string> = {
+  job: 'Job Description',
+  scholarship: 'Scholarship Criteria',
+}
+
+const JD_PLACEHOLDERS: Record<AnalysisMode, string> = {
+  job: 'Paste the full job description here.\n\nInclude responsibilities, required skills, and qualifications for the best analysis.',
+  scholarship:
+    'Paste the scholarship criteria here.\n\nInclude eligibility requirements, evaluation criteria, and program details.',
+}
+
+const CV_PLACEHOLDER =
+  'Paste your full CV or resume text here.\n\nInclude experience, education, projects, and skills so the analysis can compare your profile against the opportunity.'
+
+const SECTION_MOTION = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: MOTION.duration.slow, ease: MOTION.easeOut },
+}
+
 export function AnalyzeTool() {
-  const { step, loadingStep, session, error, runAnalysis, resetSession, restoreSession } = useAnalysis()
-  const [mode, setMode] = useState<'job' | 'scholarship'>('job')
+  const { step, loadingStep, session, error, runAnalysis, reset, restoreSession } = useAnalysis()
+  const [mode, setMode] = useState<AnalysisMode>('job')
   const [cvText, setCvText] = useState(DEMO_CV)
   const [jdText, setJdText] = useState(DEMO_JD)
 
-  function handleAnalyze() {
-    void runAnalysis(cvText, jdText, mode)
-  }
+  const canAnalyze =
+    cvText.length >= INPUT_LIMITS.cv.min && jdText.length >= INPUT_LIMITS.jd.min
 
   function handleReset() {
-    resetSession()
+    reset()
     setCvText(DEMO_CV)
     setJdText(DEMO_JD)
     setMode('job')
   }
 
   if (step === 'loading') {
-    return <LoadingOverlay loadingStep={loadingStep} loadingCopy={LOADING_COPY} />
+    return <LoadingOverlay loadingStep={loadingStep} steps={LOADING_STEPS} />
   }
 
   if (step === 'results' && session) {
     return (
-      <motion.section
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: 'easeOut' }}
-        className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:py-12"
-      >
-        <div className="grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
+      <Container as="section" className="py-8 lg:py-12">
+        <motion.div {...SECTION_MOTION} className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
           <ScorePanel session={session} onNewAnalysis={handleReset} />
           <ResultsTabs session={session} />
-        </div>
-      </motion.section>
+        </motion.div>
+      </Container>
     )
   }
 
   return (
-    <motion.section
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: 'easeOut' }}
-      className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:py-12"
-    >
-      <div className="rounded-[var(--radius-lg)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-4 shadow-[var(--shadow-card)] sm:p-6">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <ModeSelector mode={mode} onModeChange={setMode} />
-          <HistoryPanel onRestore={restoreSession} />
-        </div>
+    <Container as="section" className="py-8 lg:py-12">
+      <motion.div {...SECTION_MOTION}>
+        <Card className="p-4 sm:p-6">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+            <ModeSelector mode={mode} onModeChange={setMode} />
+            <HistoryPanel onRestore={restoreSession} />
+          </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div className="space-y-4">
-            <UploadZone onTextExtracted={setCvText} />
-            <CVTextarea value={cvText} onChange={setCvText} />
-          </div>
-          <div className="flex flex-col gap-4">
-            <JDTextarea mode={mode} value={jdText} onChange={setJdText} />
-            <div className="mt-auto">
-              <AnalyzeButton cvText={cvText} jdText={jdText} step={step} onClick={handleAnalyze} />
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="flex flex-col gap-4">
+              <UploadZone onTextExtracted={setCvText} />
+              <TextareaField
+                label="Your CV"
+                testId="cv-textarea"
+                value={cvText}
+                onChange={setCvText}
+                placeholder={CV_PLACEHOLDER}
+                minLength={INPUT_LIMITS.cv.min}
+                maxLength={INPUT_LIMITS.cv.max}
+                rows={7}
+              />
             </div>
-            {error ? (
-              <div
-                role="alert"
-                className="rounded-[var(--radius)] border border-[hsl(var(--red)/0.3)] bg-[hsl(var(--red-dim))] px-4 py-3 text-sm text-[hsl(var(--red))]"
+
+            <div className="flex flex-col gap-4">
+              <TextareaField
+                label={JD_LABELS[mode]}
+                testId="jd-textarea"
+                value={jdText}
+                onChange={setJdText}
+                placeholder={JD_PLACEHOLDERS[mode]}
+                minLength={INPUT_LIMITS.jd.min}
+                maxLength={INPUT_LIMITS.jd.max}
+                rows={9}
+                className="flex-1"
+              />
+
+              <Button
+                data-testid="analyze-button"
+                size="lg"
+                block
+                disabled={!canAnalyze}
+                title={
+                  canAnalyze
+                    ? undefined
+                    : `Enter at least ${INPUT_LIMITS.cv.min} characters for your CV and ${INPUT_LIMITS.jd.min} for the description`
+                }
+                onClick={() => void runAnalysis(cvText, jdText, mode)}
               >
-                {error}
-              </div>
-            ) : null}
+                <Sparkles className="h-4 w-4" aria-hidden="true" />
+                Analyze Match
+              </Button>
+
+              {error ? <Alert tone="error">{error}</Alert> : null}
+            </div>
           </div>
-        </div>
-      </div>
-    </motion.section>
+        </Card>
+      </motion.div>
+    </Container>
   )
 }

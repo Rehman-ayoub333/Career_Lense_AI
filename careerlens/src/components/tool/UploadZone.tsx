@@ -1,86 +1,77 @@
 'use client'
 
-import { CheckCircle2, CloudUpload, Loader2 } from 'lucide-react'
-import React, { useRef, useState } from 'react'
+import { CheckCircle2, CloudUpload, LoaderCircle } from 'lucide-react'
+import { useRef, useState } from 'react'
 
-const MAX_FILE_SIZE = 4 * 1024 * 1024
+import type { UploadResponse } from '@/lib/api/contract'
+import { postFormData, toDisplayMessage } from '@/lib/api/client'
+import { UPLOAD_LIMITS } from '@/lib/analysis/constants'
+import { cn } from '@/lib/cn'
 
-interface UploadZoneProps {
-  onTextExtracted: (text: string) => void
-}
+const MAX_MB = Math.round(UPLOAD_LIMITS.maxBytes / (1024 * 1024))
+const ACCEPT = UPLOAD_LIMITS.acceptedExtensions.join(',')
 
+type Tone = 'success' | 'error' | 'neutral'
+
+/**
+ * Client-side pre-checks.
+ *
+ * The server validates the same rules — this only spares the user a round trip
+ * for a file that is obviously wrong, so the limits come from the shared
+ * constants rather than being restated here.
+ */
 function validateFile(file: File): string | null {
-  const allowed = ['pdf', 'txt']
-  const ext = file.name.split('.').pop()?.toLowerCase()
+  const extension = `.${file.name.split('.').pop()?.toLowerCase() ?? ''}`
 
-  if (!ext || !allowed.includes(ext)) {
+  if (!UPLOAD_LIMITS.acceptedExtensions.includes(extension as '.pdf' | '.txt')) {
     return 'Please upload a PDF or TXT file.'
   }
 
-  if (file.size > MAX_FILE_SIZE) {
-    const sizeMb = (file.size / (1024 * 1024)).toFixed(1)
-    return `This file is ${sizeMb}MB. Please use a file under 4MB.`
+  if (file.size > UPLOAD_LIMITS.maxBytes) {
+    return `This file is ${(file.size / (1024 * 1024)).toFixed(1)}MB. Please use a file under ${MAX_MB}MB.`
   }
 
   return null
 }
 
-export function UploadZone({ onTextExtracted }: UploadZoneProps) {
+export function UploadZone({ onTextExtracted }: { onTextExtracted: (text: string) => void }) {
   const inputRef = useRef<HTMLInputElement | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [statusMessage, setStatusMessage] = useState<string | null>(null)
-  const [statusTone, setStatusTone] = useState<'success' | 'error' | 'neutral'>('neutral')
+  const [status, setStatus] = useState<{ tone: Tone; message: string } | null>(null)
 
   async function handleFile(file: File) {
     const validationError = validateFile(file)
     if (validationError) {
-      setStatusTone('error')
-      setStatusMessage(validationError)
+      setStatus({ tone: 'error', message: validationError })
       return
     }
 
     setIsLoading(true)
-    setStatusTone('neutral')
-    setStatusMessage(null)
+    setStatus(null)
 
     const formData = new FormData()
     formData.append('file', file)
 
     try {
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      })
-      const payload = (await response.json()) as {
-        success?: boolean
-        text?: string
-        wordCount?: number
-        message?: string
-      }
-
-      if (!response.ok || !payload.success || !payload.text) {
-        setStatusTone('error')
-        setStatusMessage(payload.message ?? 'Could not read this file. Please paste your CV text below.')
-        return
-      }
-
-      onTextExtracted(payload.text)
-      setStatusTone('success')
-      setStatusMessage(`CV loaded · ${payload.wordCount ?? 0} words detected`)
-    } catch {
-      setStatusTone('error')
-      setStatusMessage('Check your internet connection and try again.')
+      const { text, wordCount } = await postFormData<UploadResponse>('/api/upload', formData)
+      onTextExtracted(text)
+      setStatus({ tone: 'success', message: `CV loaded · ${wordCount} words detected` })
+    } catch (error) {
+      setStatus({ tone: 'error', message: toDisplayMessage(error) })
     } finally {
       setIsLoading(false)
     }
   }
+
+  const isActive = isLoading || isDragging
 
   return (
     <div
       data-testid="upload-zone"
       role="button"
       aria-label="Upload CV file"
+      aria-busy={isLoading}
       tabIndex={0}
       onClick={() => inputRef.current?.click()}
       onKeyDown={(event) => {
@@ -98,54 +89,61 @@ export function UploadZone({ onTextExtracted }: UploadZoneProps) {
         event.preventDefault()
         setIsDragging(false)
         const file = event.dataTransfer.files?.[0]
-        if (file) {
-          void handleFile(file)
-        }
+        if (file) void handleFile(file)
       }}
-      className={`flex cursor-pointer flex-col items-center justify-center rounded-[var(--radius)] border-2 border-dashed px-4 py-8 text-center transition-all duration-200 ${
-        isLoading || isDragging
-          ? 'border-[hsl(var(--violet))] bg-[hsl(var(--violet-dim))]'
-          : 'border-[hsl(var(--card-border))] bg-[hsl(var(--bg))] hover:border-[hsl(var(--text-subtle))] hover:bg-[hsl(var(--card))]'
-      }`}
+      className={cn(
+        'flex cursor-pointer flex-col items-center justify-center rounded-[var(--radius-md)]',
+        'border-2 border-dashed px-4 py-8 text-center',
+        'transition-[background-color,border-color] duration-200 ease-out',
+        isActive
+          ? 'border-violet bg-[hsl(var(--violet)/0.12)]'
+          : 'border-border bg-bg hover:border-border-strong hover:bg-surface'
+      )}
     >
       <input
         ref={inputRef}
         type="file"
-        accept=".pdf,.txt"
+        accept={ACCEPT}
         hidden
         onChange={(event) => {
           const file = event.target.files?.[0]
-          if (file) {
-            void handleFile(file)
-          }
+          if (file) void handleFile(file)
+          // Cleared so re-selecting the same file fires `change` again.
           event.target.value = ''
         }}
       />
 
       {isLoading ? (
-        <Loader2 className="mb-2 h-6 w-6 animate-spin text-[hsl(var(--violet))]" />
-      ) : statusTone === 'success' ? (
-        <CheckCircle2 className="mb-2 h-6 w-6 text-[hsl(var(--green))]" />
+        <LoaderCircle
+          className="mb-2 h-8 w-8 animate-spin text-violet-text"
+          strokeWidth={1.5}
+          aria-hidden="true"
+        />
+      ) : status?.tone === 'success' ? (
+        <CheckCircle2 className="mb-2 h-8 w-8 text-green-text" strokeWidth={1.5} aria-hidden="true" />
       ) : (
-        <CloudUpload className="mb-2 h-6 w-6 text-text-subtle" />
+        <CloudUpload className="mb-2 h-8 w-8 text-text-muted" strokeWidth={1.5} aria-hidden="true" />
       )}
 
       <div className="text-sm font-medium text-text-primary">
-        {isLoading ? 'Extracting text...' : 'Drop your CV here or click to browse'}
+        {isLoading ? 'Extracting text…' : 'Drop your CV here or click to browse'}
       </div>
-      <div className="mt-1 text-xs text-text-subtle">PDF or TXT · Max 4 MB</div>
+      <div className="mt-1 text-xs text-text-muted">PDF or TXT · Max {MAX_MB} MB</div>
 
-      {statusMessage ? (
+      {status ? (
         <div
-          className={`mt-3 text-xs font-medium ${
-            statusTone === 'success'
-              ? 'text-[hsl(var(--green))]'
-              : statusTone === 'error'
-                ? 'text-[hsl(var(--red))]'
-                : 'text-text-muted'
-          }`}
+          // Assertive for failures: the user is mid-task and the file did not
+          // load, so the message must not queue behind other announcements.
+          role={status.tone === 'error' ? 'alert' : 'status'}
+          aria-live={status.tone === 'error' ? 'assertive' : 'polite'}
+          className={cn(
+            'mt-3 text-xs font-medium',
+            status.tone === 'success' && 'text-green-text',
+            status.tone === 'error' && 'text-red-text',
+            status.tone === 'neutral' && 'text-text-muted'
+          )}
         >
-          {statusMessage}
+          {status.message}
         </div>
       ) : null}
     </div>

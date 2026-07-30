@@ -1,100 +1,100 @@
 'use client'
 
-import { Check, Copy, Loader2, RotateCcw } from 'lucide-react'
-import React, { useState } from 'react'
+import { Check, Copy, LoaderCircle, PencilLine, RotateCcw } from 'lucide-react'
+import { useState } from 'react'
 
+import { Button } from '@/components/ui/Button'
+import { SectionLabel } from '@/components/ui/Card'
+import { Alert, EmptyState } from '@/components/ui/Feedback'
+import { useClipboard } from '@/hooks/useClipboard'
+import type { RewriteRequest } from '@/lib/api/contract'
+import { postJson, toDisplayMessage } from '@/lib/api/client'
 import type { RewriteResult } from '@/types'
 
-interface RewriteTabProps {
-  rewrite: RewriteResult
+export function RewriteTab({
+  rewrite: initialRewrite,
+  cvText,
+  jdText,
+}: {
+  /** `null` when the rewrite step failed while the analysis succeeded. */
+  rewrite: RewriteResult | null
   cvText: string
   jdText: string
-}
-
-export function RewriteTab({ rewrite: initialRewrite, cvText, jdText }: RewriteTabProps) {
-  const [rewrite, setRewrite] = useState<RewriteResult>(initialRewrite)
+}) {
+  const [rewrite, setRewrite] = useState<RewriteResult | null>(initialRewrite)
   const [isRegenerating, setIsRegenerating] = useState(false)
-  const [regenError, setRegenError] = useState<string | null>(null)
-  const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const { copy, isCopied } = useClipboard()
 
   async function handleRegenerate() {
     setIsRegenerating(true)
-    setRegenError(null)
+    setError(null)
 
     try {
-      const response = await fetch('/api/rewrite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cvText, jdText }),
-      })
-      const payload = (await response.json()) as {
-        success?: boolean
-        data?: RewriteResult
-        message?: string
-      }
-
-      if (!response.ok || !payload.success || !payload.data) {
-        setRegenError(payload.message ?? 'Regeneration failed. Please try again.')
-        return
-      }
-
-      setRewrite(payload.data)
-    } catch {
-      setRegenError('Check your internet connection and try again.')
+      const result = await postJson<RewriteResult>('/api/rewrite', {
+        cvText,
+        jdText,
+      } satisfies RewriteRequest)
+      setRewrite(result)
+    } catch (cause) {
+      setError(toDisplayMessage(cause))
     } finally {
       setIsRegenerating(false)
     }
   }
 
-  async function handleCopyBullet(text: string, index: number) {
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopiedIndex(index)
-      window.setTimeout(() => setCopiedIndex(null), 1600)
-    } catch {
-      // Clipboard API unavailable
-    }
+  const regenerateButton = (
+    <Button
+      variant="secondary"
+      size="sm"
+      disabled={isRegenerating}
+      onClick={() => void handleRegenerate()}
+    >
+      {isRegenerating ? (
+        <>
+          <LoaderCircle className="h-3.5 w-3.5 animate-spin" strokeWidth={2.25} aria-hidden="true" />
+          Regenerating…
+        </>
+      ) : (
+        <>
+          <RotateCcw className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden="true" />
+          {rewrite ? 'Re-generate' : 'Generate'}
+        </>
+      )}
+    </Button>
+  )
+
+  if (!rewrite) {
+    return (
+      <div data-testid="rewrite-tab" className="space-y-4">
+        {error ? <Alert tone="error">{error}</Alert> : null}
+        <EmptyState
+          icon={PencilLine}
+          title="No rewrite was generated"
+          description="The analysis succeeded but the rewrite step did not. You can run it again now."
+          action={regenerateButton}
+        />
+      </div>
+    )
   }
 
   return (
     <div data-testid="rewrite-tab" className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-text-muted">AI-optimized rewrite preview</div>
-        <button
-          type="button"
-          disabled={isRegenerating}
-          onClick={() => void handleRegenerate()}
-          className="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--card-border))] bg-[hsl(var(--bg))] px-3 py-1.5 text-xs font-medium text-text-muted transition-all duration-200 hover:border-[hsl(var(--text-subtle))] hover:text-text-primary disabled:opacity-50"
-        >
-          {isRegenerating ? (
-            <>
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Regenerating...
-            </>
-          ) : (
-            <>
-              <RotateCcw className="h-3.5 w-3.5" />
-              Re-generate
-            </>
-          )}
-        </button>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-text-secondary">AI-optimised rewrite preview</p>
+        {regenerateButton}
       </div>
 
-      {regenError ? (
-        <div className="rounded-[var(--radius)] border border-[hsl(var(--red)/0.3)] bg-[hsl(var(--red-dim))] px-4 py-3 text-xs text-[hsl(var(--red))]">
-          {regenError}
-        </div>
-      ) : null}
+      {error ? <Alert tone="error">{error}</Alert> : null}
 
       <div className="grid gap-4 md:grid-cols-2">
-        {/* Original bullets */}
-        <div className="rounded-[var(--radius)] border border-[hsl(var(--card-border))] bg-[hsl(var(--bg))] p-4">
-          <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.15em] text-text-subtle">Original</div>
+        <div className="rounded-[var(--radius-md)] border border-border bg-bg p-4">
+          <SectionLabel className="mb-3">Original</SectionLabel>
           <ul className="space-y-2">
             {rewrite.original_bullets.map((bullet, index) => (
               <li
                 key={`original-${index}`}
-                className="rounded-[var(--radius-sm)] bg-[hsl(var(--card))] px-3 py-2.5 text-sm leading-relaxed text-text-muted"
+                className="rounded-[var(--radius-sm)] bg-surface-raised px-3 py-2.5 text-sm text-text-secondary"
               >
                 {bullet}
               </li>
@@ -102,34 +102,35 @@ export function RewriteTab({ rewrite: initialRewrite, cvText, jdText }: RewriteT
           </ul>
         </div>
 
-        {/* Rewritten bullets */}
-        <div className="rounded-[var(--radius)] border border-[hsl(var(--violet)/0.25)] bg-[hsl(var(--violet-dim))] p-4">
-          <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.15em] text-[hsl(var(--violet))]">
-            AI-Optimized
-          </div>
+        <div className="rounded-[var(--radius-md)] border border-[hsl(var(--violet)/0.35)] bg-[hsl(var(--violet)/0.12)] p-4">
+          <SectionLabel className="mb-3 text-violet-text">AI-Optimised</SectionLabel>
           <ul className="space-y-2">
-            {rewrite.rewritten_bullets.map((bullet, index) => (
-              <li
-                key={`rewritten-${index}`}
-                className="rounded-[var(--radius-sm)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] px-3 py-2.5 text-sm leading-relaxed text-text-primary"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <span>{bullet}</span>
-                  <button
-                    type="button"
-                    onClick={() => void handleCopyBullet(bullet, index)}
-                    aria-label={`Copy bullet ${index + 1}`}
-                    className="mt-0.5 shrink-0 rounded-full p-1 text-text-subtle transition-colors duration-200 hover:text-text-primary"
-                  >
-                    {copiedIndex === index ? (
-                      <Check className="h-3.5 w-3.5 text-[hsl(var(--green))]" />
-                    ) : (
-                      <Copy className="h-3.5 w-3.5" />
-                    )}
-                  </button>
-                </div>
-              </li>
-            ))}
+            {rewrite.rewritten_bullets.map((bullet, index) => {
+              const key = `rewritten-${index}`
+              return (
+                <li
+                  key={key}
+                  className="rounded-[var(--radius-sm)] border border-border bg-surface-raised px-3 py-2.5 text-sm text-text-primary"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <span>{bullet}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => void copy(bullet, key)}
+                      aria-label={`Copy bullet ${index + 1}`}
+                      className="h-8 w-8 shrink-0 px-0"
+                    >
+                      {isCopied(key) ? (
+                        <Check className="h-3.5 w-3.5 text-green-text" aria-hidden="true" />
+                      ) : (
+                        <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                      )}
+                    </Button>
+                  </div>
+                </li>
+              )
+            })}
           </ul>
         </div>
       </div>

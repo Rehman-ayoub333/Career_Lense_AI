@@ -1,30 +1,31 @@
 'use client'
 
-import { Loader2, MessageSquare, Send } from 'lucide-react'
-import React, { useEffect, useRef, useState } from 'react'
+import { LoaderCircle, MessageSquare, Send } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 
-import type { AnalysisSession } from '@/types'
-
-interface ChatMessage {
-  role: 'user' | 'assistant'
-  content: string
-}
+import { Button } from '@/components/ui/Button'
+import type { ChatRequest, ChatResponse } from '@/lib/api/contract'
+import { postJson, toDisplayMessage } from '@/lib/api/client'
+import { INPUT_LIMITS } from '@/lib/analysis/constants'
+import { cn } from '@/lib/cn'
+import type { AnalysisSession, ChatMessage } from '@/types'
 
 const QUICK_PROMPTS = [
   'What are my strongest skills?',
   "What's the biggest gap?",
   'How should I position myself?',
   'What should I learn first?',
-]
+] as const
 
-interface ChatTabProps {
-  session: AnalysisSession
+const GREETING: ChatMessage = {
+  role: 'assistant',
+  content:
+    'Ask me anything about your CV analysis. I have full context of your CV, the job description, and your match results.',
+  status: 'ok',
 }
 
-export function ChatTab({ session }: ChatTabProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'assistant', content: 'Ask me anything about your CV analysis. I have full context of your CV, the job description, and your match results.' },
-  ])
+export function ChatTab({ session }: { session: AnalysisSession }) {
+  const [messages, setMessages] = useState<ChatMessage[]>([GREETING])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const listRef = useRef<HTMLDivElement | null>(null)
@@ -34,46 +35,28 @@ export function ChatTab({ session }: ChatTabProps) {
   }, [messages])
 
   async function sendMessage(text: string) {
-    if (!text.trim() || isLoading) return
+    const message = text.trim()
+    if (!message || isLoading) return
 
-    const userMessage = text.trim()
     setInput('')
-    setMessages((current) => [...current, { role: 'user', content: userMessage }])
+    setMessages((current) => [...current, { role: 'user', content: message, status: 'ok' }])
     setIsLoading(true)
 
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: userMessage,
-          cvText: session.cvText,
-          jdText: session.jdText,
-          score: session.result.score,
-          missingSkills: session.result.skills_missing,
-          verdict: session.result.verdict,
-        }),
-      })
+      const { reply } = await postJson<ChatResponse>('/api/chat', {
+        message,
+        cvText: session.cvText,
+        jdText: session.jdText,
+        score: session.result.score,
+        verdict: session.result.verdict,
+        missingSkills: session.result.skills_missing,
+      } satisfies ChatRequest)
 
-      const payload = (await response.json()) as {
-        success?: boolean
-        reply?: string
-        message?: string
-      }
-
-      if (!response.ok || !payload.success || !payload.reply) {
-        setMessages((current) => [
-          ...current,
-          { role: 'assistant', content: payload.message ?? 'Something went wrong. Please try again.' },
-        ])
-        return
-      }
-
-      setMessages((current) => [...current, { role: 'assistant', content: payload.reply as string }])
-    } catch {
+      setMessages((current) => [...current, { role: 'assistant', content: reply, status: 'ok' }])
+    } catch (error) {
       setMessages((current) => [
         ...current,
-        { role: 'assistant', content: 'Check your internet connection and try again.' },
+        { role: 'assistant', content: toDisplayMessage(error), status: 'error' },
       ])
     } finally {
       setIsLoading(false)
@@ -82,42 +65,56 @@ export function ChatTab({ session }: ChatTabProps) {
 
   return (
     <div data-testid="chat-tab" className="flex flex-col gap-3">
-      {/* Quick prompts */}
       <div className="flex flex-wrap gap-2">
         {QUICK_PROMPTS.map((prompt) => (
-          <button
+          <Button
             key={prompt}
-            type="button"
+            variant="secondary"
+            size="sm"
             disabled={isLoading}
             onClick={() => void sendMessage(prompt)}
-            className="rounded-full border border-[hsl(var(--card-border))] bg-[hsl(var(--bg))] px-3 py-1.5 text-xs text-text-muted transition-all duration-200 hover:border-[hsl(var(--text-subtle))] hover:text-text-primary disabled:opacity-50"
           >
             {prompt}
-          </button>
+          </Button>
         ))}
       </div>
 
-      {/* Messages */}
       <div
         ref={listRef}
-        className="flex max-h-[400px] min-h-[200px] flex-col gap-3 overflow-auto rounded-[var(--radius)] border border-[hsl(var(--card-border))] bg-[hsl(var(--bg))] p-4"
+        // Polite: replies should be announced, but never interrupt the user
+        // part-way through composing the next question.
+        role="log"
+        aria-live="polite"
+        aria-label="Conversation"
+        className="flex max-h-[400px] min-h-[200px] flex-col gap-3 overflow-y-auto rounded-[var(--radius-md)] border border-border bg-bg p-4"
       >
         {messages.map((message, index) => (
           <div
             key={`${message.role}-${index}`}
-            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={cn('flex', message.role === 'user' ? 'justify-end' : 'justify-start')}
           >
             {message.role === 'assistant' ? (
               <div className="flex max-w-[85%] gap-2.5">
-                <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--violet-dim))]">
-                  <MessageSquare className="h-3 w-3 text-[hsl(var(--violet))]" />
+                <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--violet)/0.12)]">
+                  <MessageSquare
+                    className="h-3.5 w-3.5 text-violet-text"
+                    strokeWidth={2.25}
+                    aria-hidden="true"
+                  />
                 </div>
-                <div className="rounded-2xl rounded-tl-md bg-[hsl(var(--card))] px-4 py-2.5 text-sm leading-relaxed text-text-primary">
+                <div
+                  className={cn(
+                    'rounded-[var(--radius-lg)] rounded-tl-[var(--radius-sm)] px-4 py-2.5 text-sm',
+                    message.status === 'error'
+                      ? 'border border-[hsl(var(--red)/0.35)] bg-[hsl(var(--red)/0.1)] text-red-text'
+                      : 'bg-surface-raised text-text-primary'
+                  )}
+                >
                   {message.content}
                 </div>
               </div>
             ) : (
-              <div className="max-w-[85%] rounded-2xl rounded-tr-md bg-[hsl(var(--violet))] px-4 py-2.5 text-sm leading-relaxed text-white">
+              <div className="max-w-[85%] rounded-[var(--radius-lg)] rounded-tr-[var(--radius-sm)] bg-violet px-4 py-2.5 text-sm text-white">
                 {message.content}
               </div>
             )}
@@ -127,19 +124,22 @@ export function ChatTab({ session }: ChatTabProps) {
         {isLoading ? (
           <div className="flex justify-start">
             <div className="flex gap-2.5">
-              <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--violet-dim))]">
-                <MessageSquare className="h-3 w-3 text-[hsl(var(--violet))]" />
+              <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--violet)/0.12)]">
+                <MessageSquare
+                  className="h-3.5 w-3.5 text-violet-text"
+                  strokeWidth={2.25}
+                  aria-hidden="true"
+                />
               </div>
-              <div className="flex items-center gap-2 rounded-2xl rounded-tl-md bg-[hsl(var(--card))] px-4 py-2.5 text-sm text-text-muted">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Thinking...
+              <div className="flex items-center gap-2 rounded-[var(--radius-lg)] rounded-tl-[var(--radius-sm)] bg-surface-raised px-4 py-2.5 text-sm text-text-secondary">
+                <LoaderCircle className="h-3.5 w-3.5 animate-spin" strokeWidth={2.25} aria-hidden="true" />
+                Thinking…
               </div>
             </div>
           </div>
         ) : null}
       </div>
 
-      {/* Input */}
       <div className="flex gap-2">
         <input
           data-testid="chat-input"
@@ -152,21 +152,24 @@ export function ChatTab({ session }: ChatTabProps) {
             }
           }}
           disabled={isLoading}
-          className="flex-1 rounded-full border border-[hsl(var(--card-border))] bg-[hsl(var(--bg))] px-4 py-2.5 text-sm text-text-primary outline-none transition-all duration-200 focus:border-[hsl(var(--violet))] focus:shadow-[0_0_0_3px_hsl(var(--violet)/0.1)] disabled:opacity-50"
-          placeholder="Ask about your analysis..."
+          maxLength={INPUT_LIMITS.chatMessage.max}
+          placeholder="Ask about your analysis…"
           aria-label="Chat message"
-          maxLength={500}
+          className={cn(
+            'h-10 flex-1 rounded-full border border-border bg-bg px-4 text-sm text-text-primary',
+            'placeholder:text-text-muted outline-none disabled:opacity-45',
+            'transition-[border-color] duration-200 ease-out focus:border-violet'
+          )}
         />
-        <button
+        <Button
           data-testid="chat-send"
-          type="button"
           disabled={isLoading || !input.trim()}
           onClick={() => void sendMessage(input)}
           aria-label="Send message"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--violet))] text-white transition-all duration-200 hover:shadow-[0_0_16px_hsl(var(--violet)/0.3)] disabled:opacity-50 disabled:shadow-none active:scale-[0.95]"
+          className="h-10 w-10 shrink-0 px-0"
         >
-          <Send className="h-4 w-4" />
-        </button>
+          <Send className="h-4 w-4" aria-hidden="true" />
+        </Button>
       </div>
     </div>
   )

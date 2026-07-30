@@ -1,83 +1,90 @@
-import { AlertTriangle, CheckCircle2, CircleX, Lightbulb } from 'lucide-react'
-import React from 'react'
+import { AlertTriangle, CheckCircle2, CircleX, Lightbulb, ShieldCheck } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
-import { Badge } from '@/components/shared/Badge'
-import type { AnalysisResult, ATSCheck } from '@/types'
+import { Badge, type BadgeVariant } from '@/components/ui/Badge'
+import { EmptyState } from '@/components/ui/Feedback'
+import { getAtsFixTip } from '@/lib/analysis/ats-tips'
+import { cn } from '@/lib/cn'
+import type { AnalysisResult, ATSStatus } from '@/types'
 
-interface ATSTabProps {
-  result: AnalysisResult
+const STATUS: Record<ATSStatus, { className: string; icon: LucideIcon; iconClass: string }> = {
+  pass: {
+    className: 'border-[hsl(var(--green)/0.35)] bg-[hsl(var(--green)/0.1)]',
+    icon: CheckCircle2,
+    iconClass: 'text-green-text',
+  },
+  fail: {
+    className: 'border-[hsl(var(--red)/0.35)] bg-[hsl(var(--red)/0.1)]',
+    icon: CircleX,
+    iconClass: 'text-red-text',
+  },
+  warn: {
+    className: 'border-[hsl(var(--amber)/0.35)] bg-[hsl(var(--amber)/0.1)]',
+    icon: AlertTriangle,
+    iconClass: 'text-amber-text',
+  },
 }
 
-const statusStyles = {
-  pass: 'border-[hsl(var(--green)/0.3)] bg-[hsl(var(--green-dim))]',
-  fail: 'border-[hsl(var(--red)/0.3)] bg-[hsl(var(--red-dim))]',
-  warn: 'border-[hsl(var(--amber)/0.3)] bg-[hsl(var(--amber-dim))]',
+function summaryVariant(passed: number, total: number): BadgeVariant {
+  if (passed === total) return 'pass'
+  return passed >= total / 2 ? 'warn' : 'fail'
 }
 
-const ATS_FIX_TIPS: Record<string, string> = {
-  headings: 'Use standard headings: "Experience", "Education", "Skills". Avoid creative alternatives like "My Journey" or "Expertise".',
-  tables: 'Remove all tables and multi-column layouts. Use simple bullet points and single-column formatting instead.',
-  contact: 'Move your name, email, phone, and LinkedIn to the body text. Never put contact info in headers or footers.',
-  keywords: 'Copy 5-8 exact keyword phrases from the job description into your experience bullets naturally.',
-  dates: 'Use one date format consistently: "Jan 2023 - Present" or "01/2023 - Present". Never mix formats.',
-  graphics: 'Remove all images, icons, logos, and decorative elements. ATS cannot parse visual content.',
-  length: 'Keep your CV to 1-2 pages. Remove outdated roles (>10 years old) and irrelevant experience.',
-  fonts: 'Use standard fonts: Arial, Calibri, Times New Roman. Avoid custom or decorative fonts.',
-  research: 'Add a dedicated "Research" or "Publications" section. List papers, conferences, or thesis work with dates.',
-  leadership: 'Document leadership roles with specific outcomes: "Led a team of 5 to deliver X, resulting in Y".',
-  motivation: 'Write 2-3 sentences in your personal statement connecting your background to the program goals.',
-  academic: 'List your CGPA, class rank, dean\'s list, or academic awards prominently near the top.',
-  international: 'Mention international experiences: exchange programs, conferences abroad, language certifications.',
-  community: 'Add volunteer work, community projects, or extracurricular leadership with measurable impact.',
-  language: 'List all languages with proficiency levels (B2, C1, native). Include test scores like IELTS or TOEFL.',
-  fit: 'Reference the specific program or scholarship by name and explain why it aligns with your goals.',
-}
+export function ATSTab({ result }: { result: AnalysisResult }) {
+  const checks = result.ats_checks
 
-function getFixTip(check: ATSCheck): string | null {
-  if (check.status === 'pass') return null
-  return ATS_FIX_TIPS[check.id] ?? null
-}
+  if (checks.length === 0) {
+    return (
+      <div data-testid="ats-tab">
+        <EmptyState
+          icon={ShieldCheck}
+          title="No ATS checks available"
+          description="Re-run the analysis to generate an applicant-tracking-system report."
+        />
+      </div>
+    )
+  }
 
-export function ATSTab({ result }: ATSTabProps) {
-  const passed = result.ats_checks.filter((check) => check.status === 'pass').length
-  const total = result.ats_checks.length
+  const passed = checks.filter((check) => check.status === 'pass').length
 
   return (
     <div data-testid="ats-tab" className="space-y-4">
-      <div className="flex items-center gap-3">
-        <Badge
-          label={`${passed}/${total} checks passed`}
-          variant={passed === total ? 'pass' : passed >= total / 2 ? 'warn' : 'fail'}
-        />
-      </div>
+      <Badge variant={summaryVariant(passed, checks.length)}>
+        {passed}/{checks.length} checks passed
+      </Badge>
 
-      <div className="space-y-2">
-        {result.ats_checks.map((check) => {
-          const Icon = check.status === 'pass' ? CheckCircle2 : check.status === 'warn' ? AlertTriangle : CircleX
-          const fixTip = getFixTip(check)
+      <ul className="space-y-2">
+        {checks.map((check) => {
+          const { className, icon: Icon, iconClass } = STATUS[check.status]
+          const fixTip = getAtsFixTip(check)
 
           return (
-            <div
+            <li
               key={check.id}
-              className={`rounded-[var(--radius)] border px-3 py-3 transition ${statusStyles[check.status]}`}
+              className={cn('rounded-[var(--radius-md)] border px-3 py-3', className)}
             >
               <div className="flex items-start gap-3">
-                <Icon className="mt-0.5 h-4 w-4 shrink-0" />
+                <Icon className={cn('mt-0.5 h-4 w-4 shrink-0', iconClass)} aria-hidden="true" />
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium text-text-primary">{check.label}</div>
-                  <div className="mt-0.5 text-xs text-text-muted">{check.note}</div>
+                  <p className="text-sm font-medium text-text-primary">{check.label}</p>
+                  <p className="mt-0.5 text-xs text-text-secondary">{check.note}</p>
+
                   {fixTip ? (
                     <div className="mt-2 flex items-start gap-2 rounded-[var(--radius-sm)] bg-[hsl(var(--bg)/0.4)] px-2 py-1.5">
-                      <Lightbulb className="mt-0.5 h-3 w-3 shrink-0 text-[hsl(var(--amber))]" />
-                      <span className="text-xs text-text-muted">{fixTip}</span>
+                      <Lightbulb
+                        className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-text"
+                        strokeWidth={2.25}
+                        aria-hidden="true"
+                      />
+                      <span className="text-xs text-text-secondary">{fixTip}</span>
                     </div>
                   ) : null}
                 </div>
               </div>
-            </div>
+            </li>
           )
         })}
-      </div>
+      </ul>
     </div>
   )
 }

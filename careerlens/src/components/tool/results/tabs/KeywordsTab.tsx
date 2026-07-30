@@ -1,25 +1,20 @@
 import { Search } from 'lucide-react'
-import React from 'react'
 
-import { EmptyState } from '@/components/shared/EmptyState'
-import { Tag } from '@/components/shared/Tag'
+import { Tag } from '@/components/ui/Badge'
+import { EmptyState } from '@/components/ui/Feedback'
 import type { AnalysisResult } from '@/types'
 
-interface KeywordsTabProps {
-  result: AnalysisResult
-}
+export function KeywordsTab({ result }: { result: AnalysisResult }) {
+  const present = result.keywords_present
+  const missing = result.keywords_missing
 
-export function KeywordsTab({ result }: KeywordsTabProps) {
-  const hasPresent = result.keywords_present.length > 0
-  const hasMissing = result.keywords_missing.length > 0
-
-  if (!hasPresent && !hasMissing) {
+  if (present.length === 0 && missing.length === 0) {
     return (
       <div data-testid="keywords-tab">
         <EmptyState
           icon={Search}
           title="No keywords detected"
-          subtitle="Try adding more specific technical terms and skills to your CV."
+          description="Try adding more specific technical terms and skills to your CV."
         />
       </div>
     )
@@ -27,27 +22,31 @@ export function KeywordsTab({ result }: KeywordsTabProps) {
 
   return (
     <div data-testid="keywords-tab" className="space-y-4">
-      {hasPresent ? (
+      {present.length > 0 ? (
         <div>
-          <div className="mb-2 text-sm font-semibold text-text-primary">
-            Keywords Found ({result.keywords_present.length})
-          </div>
+          <h3 className="mb-2 text-sm font-semibold text-text-primary">
+            Keywords Found ({present.length})
+          </h3>
           <div className="flex flex-wrap gap-2">
-            {result.keywords_present.map((keyword) => (
-              <Tag key={keyword} label={keyword} variant="match" />
+            {present.map((keyword) => (
+              <Tag key={keyword} variant="match">
+                {keyword}
+              </Tag>
             ))}
           </div>
         </div>
       ) : null}
 
-      {hasMissing ? (
+      {missing.length > 0 ? (
         <div>
-          <div className="mb-2 text-sm font-semibold text-text-primary">
-            High-Value Keywords Missing ({result.keywords_missing.length})
-          </div>
+          <h3 className="mb-2 text-sm font-semibold text-text-primary">
+            High-Value Keywords Missing ({missing.length})
+          </h3>
           <div className="flex flex-wrap gap-2">
-            {result.keywords_missing.map((keyword) => (
-              <Tag key={keyword} label={keyword} variant="missing" />
+            {missing.map((keyword) => (
+              <Tag key={keyword} variant="missing">
+                {keyword}
+              </Tag>
             ))}
           </div>
           <p className="mt-3 text-xs text-text-muted">

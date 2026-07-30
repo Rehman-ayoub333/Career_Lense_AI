@@ -1,95 +1,52 @@
-import { NextRequest, NextResponse } from 'next/server'
-
-import { callClaude } from '@/lib/claude'
+import { generateText } from '@/lib/ai'
+import { AI_TIMEOUT_MS, INPUT_LIMITS, ROUTE_MAX_DURATION_SECONDS } from '@/lib/analysis/constants'
+import type { CoverLetterResponse } from '@/lib/api/contract'
+import { createApiRoute, readJsonBody } from '@/lib/api/route'
+import { AppError } from '@/lib/errors'
 import { COVER_LETTER_SYSTEM_PROMPT, getCoverLetterPrompt } from '@/lib/prompts'
-import { checkRateLimit, getAIRateLimitKey } from '@/lib/rate-limit'
-import { validateTextInput } from '@/lib/validators'
+import { checkAiRateLimit } from '@/lib/rate-limit'
+import { parseObjectBody, parseTextField } from '@/lib/validators'
 
-export async function POST(req: NextRequest) {
-  const rateLimit = checkRateLimit(getAIRateLimitKey(req))
+export const runtime = 'nodejs'
+export const maxDuration = ROUTE_MAX_DURATION_SECONDS
 
-  if (!rateLimit.allowed) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'RATE_LIMIT',
-        message: 'Too many requests. Please wait 30 seconds.',
-      },
-      { status: 429 }
-    )
-  }
+/** A three-paragraph letter that comes back this short is a truncated generation. */
+const MIN_LETTER_CHARS = 200
 
-  let body: unknown
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'VALIDATION_ERROR',
-        message: 'Invalid JSON body supplied.',
-      },
-      { status: 400 }
-    )
-  }
+export const POST = createApiRoute<CoverLetterResponse>({
+  name: 'cover-letter',
+  timeoutMs: AI_TIMEOUT_MS.coverLetter,
+  rateLimit: { check: checkAiRateLimit, scope: 'ai' },
 
-  if (!body || typeof body !== 'object') {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'VALIDATION_ERROR',
-        message: 'Request body must be a JSON object.',
-      },
-      { status: 400 }
-    )
-  }
+  async handler(request, { signal }) {
+    const body = parseObjectBody(await readJsonBody(request))
 
-  const candidate = body as Record<string, unknown>
+    const cvText = parseTextField(body.cvText, { label: 'CV', ...INPUT_LIMITS.cv })
+    const jdText = parseTextField(body.jdText, { label: 'job description', ...INPUT_LIMITS.jd })
 
-  try {
-    const safeCvText = validateTextInput(String(candidate.cvText ?? ''), 100, 8000)
-    const safeJdText = validateTextInput(String(candidate.jdText ?? ''), 50, 4000)
+    // `generateText` requests prose. This is the endpoint the previous
+    // implementation broke: it applied a JSON response format to every provider
+    // call, so a Gemini-only deployment returned a JSON-encoded string here
+    // instead of a letter.
+    const coverLetter = await generateText({
+      label: 'cover-letter',
+      system: COVER_LETTER_SYSTEM_PROMPT,
+      user: getCoverLetterPrompt(cvText, jdText),
+      // Prose needs variation; a deterministic letter reads like a form response.
+      temperature: 0.7,
+      maxOutputTokens: 1024,
+      signal,
+    })
 
-    const coverLetter = await Promise.race([
-      callClaude(COVER_LETTER_SYSTEM_PROMPT, getCoverLetterPrompt(safeCvText, safeJdText)),
-      new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('AI_TIMEOUT')), 25_000)
-      }),
-    ])
+    const trimmed = coverLetter.trim()
 
-    return NextResponse.json({ success: true, coverLetter })
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unexpected server error.'
-
-    if (message === 'AI_TIMEOUT') {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'TIMEOUT',
-          message: 'Cover letter generation took too long. Please try again.',
-        },
-        { status: 503 }
-      )
+    if (trimmed.length < MIN_LETTER_CHARS) {
+      throw new AppError('AI_INVALID_OUTPUT', {
+        publicMessage: 'We could not draft a complete cover letter this time. Please try again.',
+        detail: `Cover letter was only ${trimmed.length} characters.`,
+      })
     }
 
-    if (message.includes('Input must be at least')) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'VALIDATION_ERROR',
-          message,
-        },
-        { status: 400 }
-      )
-    }
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'AI_ERROR',
-        message,
-      },
-      { status: 500 }
-    )
-  }
-}
+    return { coverLetter: trimmed }
+  },
+})

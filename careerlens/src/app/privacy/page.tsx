@@ -1,17 +1,20 @@
 import type { Metadata } from 'next'
 
+import { Card } from '@/components/ui/Card'
+import { Container } from '@/components/ui/Container'
+
 export const metadata: Metadata = {
   title: 'Privacy Policy',
 }
 
 export default function PrivacyPage() {
   return (
-    <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
-      <article className="rounded-[var(--radius-lg)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-6 sm:p-8">
-        <h1 className="text-2xl font-bold text-text-primary">Privacy Policy</h1>
-        <p className="mt-2 text-xs text-text-subtle">Last updated: July 2026</p>
+    <Container as="main" width="prose" className="py-12">
+      <Card as="article" className="p-6 sm:p-8">
+        <h1 className="text-2xl font-semibold text-text-primary">Privacy Policy</h1>
+        <p className="mt-2 text-xs text-text-muted">Last updated: July 2026</p>
 
-        <div className="mt-6 space-y-6 text-sm leading-relaxed text-text-muted">
+        <div className="mt-6 space-y-6 text-sm text-text-secondary">
           <section>
             <h2 className="mb-2 text-base font-semibold text-text-primary">What we collect</h2>
             <p>
@@ -75,7 +78,7 @@ export default function PrivacyPage() {
             </p>
           </section>
         </div>
-      </article>
-    </main>
+      </Card>
+    </Container>
   )
 }

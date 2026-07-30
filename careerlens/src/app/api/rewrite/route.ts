@@ -1,125 +1,40 @@
-import { NextRequest, NextResponse } from 'next/server'
-
-import { callClaudeJSON } from '@/lib/claude'
+import { generateJson } from '@/lib/ai'
+import { AI_TIMEOUT_MS, INPUT_LIMITS, ROUTE_MAX_DURATION_SECONDS } from '@/lib/analysis/constants'
+import { isRewriteResult, normalizeRewriteResult } from '@/lib/analysis/guards'
+import { REWRITE_SCHEMA } from '@/lib/analysis/schemas'
+import { createApiRoute, readJsonBody } from '@/lib/api/route'
 import { REWRITE_SYSTEM_PROMPT, getRewritePrompt } from '@/lib/prompts'
-import { checkRateLimit, getAIRateLimitKey } from '@/lib/rate-limit'
-import { validateTextInput } from '@/lib/validators'
+import { checkAiRateLimit } from '@/lib/rate-limit'
+import { parseObjectBody, parseTextField } from '@/lib/validators'
 import type { RewriteResult } from '@/types'
 
-const REWRITE_SCHEMA = `{
-  "original_bullets": [""],
-  "rewritten_bullets": [""]
-}`
+export const runtime = 'nodejs'
+export const maxDuration = ROUTE_MAX_DURATION_SECONDS
 
-function isRewriteResult(value: unknown): value is RewriteResult {
-  if (!value || typeof value !== 'object') return false
-  const candidate = value as Record<string, unknown>
-  return (
-    Array.isArray(candidate.original_bullets) &&
-    candidate.original_bullets.length > 0 &&
-    candidate.original_bullets.every((b: unknown) => typeof b === 'string') &&
-    Array.isArray(candidate.rewritten_bullets) &&
-    candidate.rewritten_bullets.length > 0 &&
-    candidate.rewritten_bullets.every((b: unknown) => typeof b === 'string')
-  )
-}
+export const POST = createApiRoute<RewriteResult>({
+  name: 'rewrite',
+  timeoutMs: AI_TIMEOUT_MS.rewrite,
+  rateLimit: { check: checkAiRateLimit, scope: 'ai' },
 
-export async function POST(req: NextRequest) {
-  const rateLimit = checkRateLimit(getAIRateLimitKey(req))
+  async handler(request, { signal }) {
+    const body = parseObjectBody(await readJsonBody(request))
 
-  if (!rateLimit.allowed) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'RATE_LIMIT',
-        message: 'Too many requests. Please wait 30 seconds.',
-      },
-      { status: 429 }
-    )
-  }
+    const cvText = parseTextField(body.cvText, { label: 'CV', ...INPUT_LIMITS.cv })
+    const jdText = parseTextField(body.jdText, { label: 'job description', ...INPUT_LIMITS.jd })
 
-  let body: unknown
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'VALIDATION_ERROR',
-        message: 'Invalid JSON body supplied.',
-      },
-      { status: 400 }
-    )
-  }
+    const result = await generateJson<RewriteResult>({
+      label: 'rewrite',
+      system: REWRITE_SYSTEM_PROMPT,
+      user: getRewritePrompt(cvText, jdText),
+      schema: REWRITE_SCHEMA,
+      validate: isRewriteResult,
+      // A little warmth: rewriting is a writing task, and temperature 0 makes
+      // every bullet collapse into the same sentence template. Re-generate would
+      // otherwise return near-identical output and feel broken.
+      temperature: 0.4,
+      signal,
+    })
 
-  if (!body || typeof body !== 'object') {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'VALIDATION_ERROR',
-        message: 'Request body must be a JSON object.',
-      },
-      { status: 400 }
-    )
-  }
-
-  const candidate = body as Record<string, unknown>
-
-  try {
-    const safeCvText = validateTextInput(String(candidate.cvText ?? ''), 100, 8000)
-    const safeJdText = validateTextInput(String(candidate.jdText ?? ''), 50, 4000)
-
-    const result = await Promise.race([
-      callClaudeJSON<RewriteResult>(REWRITE_SYSTEM_PROMPT, getRewritePrompt(safeCvText, safeJdText), REWRITE_SCHEMA),
-      new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('AI_TIMEOUT')), 25_000)
-      }),
-    ])
-
-    if (!isRewriteResult(result)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'AI_ERROR',
-          message: 'Our AI returned an incomplete rewrite. Please try again.',
-        },
-        { status: 500 }
-      )
-    }
-
-    return NextResponse.json({ success: true, data: result })
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unexpected server error.'
-
-    if (message === 'AI_TIMEOUT') {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'TIMEOUT',
-          message: 'Rewrite took too long. Please try again.',
-        },
-        { status: 503 }
-      )
-    }
-
-    if (message.includes('Input must be at least')) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'VALIDATION_ERROR',
-          message,
-        },
-        { status: 400 }
-      )
-    }
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'AI_ERROR',
-        message,
-      },
-      { status: 500 }
-    )
-  }
-}
+    return normalizeRewriteResult(result)
+  },
+})

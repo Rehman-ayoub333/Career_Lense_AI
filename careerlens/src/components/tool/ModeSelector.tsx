@@ -1,34 +1,45 @@
-import React from 'react'
+'use client'
 
-interface ModeSelectorProps {
-  mode: 'job' | 'scholarship'
-  onModeChange: (nextMode: 'job' | 'scholarship') => void
-}
+import { cn } from '@/lib/cn'
+import type { AnalysisMode } from '@/types'
 
-export function ModeSelector({ mode, onModeChange }: ModeSelectorProps) {
+const OPTIONS: readonly { id: AnalysisMode; label: string }[] = [
+  { id: 'job', label: 'Job Description' },
+  { id: 'scholarship', label: 'Scholarship Criteria' },
+]
+
+export function ModeSelector({
+  mode,
+  onModeChange,
+}: {
+  mode: AnalysisMode
+  onModeChange: (next: AnalysisMode) => void
+}) {
   return (
     <div
       data-testid="mode-toggle"
       role="radiogroup"
       aria-label="Analysis mode"
-      className="inline-flex rounded-full border border-[hsl(var(--card-border))] bg-[hsl(var(--bg))] p-1"
+      className="inline-flex rounded-full border border-border bg-bg p-1"
     >
-      {(['job', 'scholarship'] as const).map((option) => {
-        const active = mode === option
+      {OPTIONS.map(({ id, label }) => {
+        const active = mode === id
         return (
           <button
-            key={option}
+            key={id}
             type="button"
             role="radio"
             aria-checked={active}
-            onClick={() => onModeChange(option)}
-            className={`rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 ${
+            onClick={() => onModeChange(id)}
+            className={cn(
+              'h-9 rounded-full px-4 text-sm font-medium',
+              'transition-[background-color,color,box-shadow] duration-200 ease-out',
               active
-                ? 'bg-[hsl(var(--violet))] text-white shadow-[0_0_16px_hsl(var(--violet)/0.25)]'
-                : 'text-text-muted hover:text-text-primary'
-            }`}
+                ? 'bg-violet text-white shadow-[var(--glow-violet)]'
+                : 'text-text-secondary hover:text-text-primary'
+            )}
           >
-            {option === 'job' ? 'Job Description' : 'Scholarship Criteria'}
+            {label}
           </button>
         )
       })}

@@ -1,14 +1,24 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { PencilLine, ShieldCheck, Sparkles } from 'lucide-react'
-import React from 'react'
+import { PencilLine, ShieldCheck, Sparkles, type LucideIcon } from 'lucide-react'
 
-const cards = [
+import { Card } from '@/components/ui/Card'
+import { Container } from '@/components/ui/Container'
+import { MOTION } from '@/config/design-tokens'
+
+interface Feature {
+  icon: LucideIcon
+  title: string
+  description: string
+}
+
+const FEATURES: readonly Feature[] = [
   {
     icon: Sparkles,
     title: 'Scholarship Mode',
-    description: 'The only tool that evaluates your CV against DAAD, Stipendium Hungaricum, and Chevening criteria.',
+    description:
+      'The only tool that evaluates your CV against DAAD, Stipendium Hungaricum, and Chevening criteria.',
   },
   {
     icon: ShieldCheck,
@@ -24,25 +34,30 @@ const cards = [
 
 export function FeatureCards() {
   return (
-    <section className="mx-auto max-w-6xl px-4 pb-12 sm:px-6 lg:pb-16">
+    <Container as="section" className="pb-12 lg:pb-16">
       <div className="grid gap-4 md:grid-cols-3">
-        {cards.map(({ icon: Icon, title, description }, index) => (
-          <motion.article
+        {FEATURES.map(({ icon: Icon, title, description }, index) => (
+          <motion.div
             key={title}
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-40px' }}
-            transition={{ duration: 0.4, delay: index * 0.1, ease: 'easeOut' }}
-            className="group rounded-[var(--radius-lg)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-6 shadow-[var(--shadow-card)] transition-all duration-200 hover:border-[hsl(var(--violet)/0.3)] hover:shadow-[var(--shadow-elevated)]"
+            transition={{
+              duration: MOTION.duration.slow,
+              delay: index * MOTION.stagger,
+              ease: MOTION.easeOut,
+            }}
           >
-            <div className="mb-4 inline-flex rounded-[var(--radius)] bg-[hsl(var(--violet-dim))] p-2.5 text-[hsl(var(--violet))] transition-colors duration-200 group-hover:bg-[hsl(var(--violet)/0.18)]">
-              <Icon className="h-5 w-5" />
-            </div>
-            <h3 className="text-base font-semibold text-text-primary">{title}</h3>
-            <p className="mt-2 text-sm leading-relaxed text-text-muted">{description}</p>
-          </motion.article>
+            <Card as="article" interactive className="group h-full p-6">
+              <div className="mb-4 inline-flex rounded-[var(--radius-md)] bg-[hsl(var(--violet)/0.12)] p-2.5 text-violet-text transition-colors duration-200 ease-out group-hover:bg-[hsl(var(--violet)/0.18)]">
+                <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" />
+              </div>
+              <h3 className="text-lg font-semibold text-text-primary">{title}</h3>
+              <p className="mt-2 text-sm text-text-secondary">{description}</p>
+            </Card>
+          </motion.div>
         ))}
       </div>
-    </section>
+    </Container>
   )
 }

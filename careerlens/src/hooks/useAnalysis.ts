@@ -1,146 +1,169 @@
-import { useState } from 'react'
+'use client'
 
-import { readHistory, writeHistory } from '@/lib/history'
-import type { AnalysisMode, AnalysisResult, AnalysisSession, RewriteResult } from '@/types'
+import { useCallback, useEffect, useRef, useState } from 'react'
+
+import type {
+  AnalyzeRequest,
+  CoverLetterRequest,
+  CoverLetterResponse,
+  RewriteRequest,
+} from '@/lib/api/contract'
+import { postJson, toDisplayMessage } from '@/lib/api/client'
+import { addToHistory } from '@/lib/history'
+import type { AnalysisMode, AnalysisResult, AnalysisSession, AnalysisStep, RewriteResult } from '@/types'
 
 /**
- * Loading step copy tied to real API completion events — not a random timer.
- * Index maps to the loadingStep value in state:
- *   0 — before first call
- *   1 — /api/analyze running
- *   2 — /api/rewrite + /api/cover-letter running in parallel
- *   3 — finalizing (very brief)
+ * Owns the analysis workflow: request orchestration, progress, persistence.
+ *
+ * Progress copy is keyed to real completion events rather than a timer, so the
+ * indicator cannot claim to be "almost done" while the first request is still
+ * in flight.
  */
-export const LOADING_COPY = [
-  'Reading your CV...',
-  'Analyzing match score...',
-  'Crafting your optimized CV...',
-  'Almost done...',
+export const LOADING_STEPS = [
+  'Reading your CV',
+  'Scoring the match',
+  'Writing your optimised bullets',
+  'Finishing up',
 ] as const
 
+interface AnalysisState {
+  step: AnalysisStep
+  loadingStep: number
+  error: string | null
+  session: AnalysisSession | null
+}
+
+const INITIAL_STATE: AnalysisState = {
+  step: 'input',
+  loadingStep: 0,
+  error: null,
+  session: null,
+}
+
+/** Uses the first non-empty line of the description as a human-readable label. */
+function deriveJobTitle(jdText: string, mode: AnalysisMode): string {
+  const firstLine = jdText
+    .split('\n')
+    .map((line) => line.trim())
+    .find((line) => line.length > 0)
+
+  if (!firstLine) return mode === 'scholarship' ? 'Scholarship application' : 'Role'
+  return firstLine.length > 80 ? `${firstLine.slice(0, 77)}...` : firstLine
+}
+
 export function useAnalysis() {
-  const [step, setStep] = useState<'input' | 'loading' | 'results'>('input')
-  const [loadingStep, setLoadingStep] = useState(0)
-  const [error, setError] = useState<string | null>(null)
-  const [session, setSession] = useState<AnalysisSession | null>(null)
+  const [state, setState] = useState<AnalysisState>(INITIAL_STATE)
 
-  /**
-   * Resets all analysis state without a page reload.
-   * CV text, JD text, and mode are managed by AnalyzeTool and reset there.
-   */
-  function resetSession(): void {
-    setStep('input')
-    setLoadingStep(0)
-    setError(null)
-    setSession(null)
-  }
+  /** Lets a navigating-away or resetting user cancel in-flight requests. */
+  const abortRef = useRef<AbortController | null>(null)
 
-  async function runAnalysis(cvText: string, jdText: string, mode: AnalysisMode): Promise<void> {
-    setError(null)
-    setStep('loading')
-    setLoadingStep(0)
+  // Abort on unmount so a discarded response can never call setState.
+  useEffect(() => () => abortRef.current?.abort(), [])
 
-    try {
-      // ── Step 1: Main analysis ────────────────────────────────────────────
-      setLoadingStep(1)
-      const analyzeResponse = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cvText, jdText, mode }),
-      })
+  const reset = useCallback(() => {
+    abortRef.current?.abort()
+    abortRef.current = null
+    setState(INITIAL_STATE)
+  }, [])
 
-      const analyzePayload = (await analyzeResponse.json()) as {
-        success?: boolean
-        data?: AnalysisResult
-        message?: string
+  const dismissError = useCallback(() => {
+    setState((current) => ({ ...current, error: null }))
+  }, [])
+
+  const restoreSession = useCallback((session: AnalysisSession) => {
+    abortRef.current?.abort()
+    setState({ step: 'results', loadingStep: 0, error: null, session })
+  }, [])
+
+  /** Replaces the rewrite on the active session, e.g. after a manual retry. */
+  const updateRewrite = useCallback((rewrite: RewriteResult) => {
+    setState((current) =>
+      current.session ? { ...current, session: { ...current.session, rewrite } } : current
+    )
+  }, [])
+
+  const updateCoverLetter = useCallback((coverLetter: string) => {
+    setState((current) =>
+      current.session ? { ...current, session: { ...current.session, coverLetter } } : current
+    )
+  }, [])
+
+  const runAnalysis = useCallback(
+    async (cvText: string, jdText: string, mode: AnalysisMode): Promise<void> => {
+      abortRef.current?.abort()
+      const controller = new AbortController()
+      abortRef.current = controller
+
+      setState({ step: 'loading', loadingStep: 1, error: null, session: null })
+
+      try {
+        // Step 1 — the analysis. This one is load-bearing: without a score there
+        // is nothing to show, so a failure here aborts the run.
+        const result = await postJson<AnalysisResult>(
+          '/api/analyze',
+          { cvText, jdText, mode } satisfies AnalyzeRequest,
+          { signal: controller.signal }
+        )
+
+        if (controller.signal.aborted) return
+        setState((current) => ({ ...current, loadingStep: 2 }))
+
+        // Step 2 — the two enhancements. They depend only on the inputs, not on
+        // step 1, so they run concurrently: roughly a third off total wall time.
+        //
+        // `allSettled`, not `all`: either may fail without invalidating the
+        // analysis the user has already paid for in waiting time and quota.
+        const [rewriteOutcome, coverLetterOutcome] = await Promise.allSettled([
+          postJson<RewriteResult>('/api/rewrite', { cvText, jdText } satisfies RewriteRequest, {
+            signal: controller.signal,
+          }),
+          postJson<CoverLetterResponse>(
+            '/api/cover-letter',
+            { cvText, jdText } satisfies CoverLetterRequest,
+            { signal: controller.signal }
+          ),
+        ])
+
+        if (controller.signal.aborted) return
+        setState((current) => ({ ...current, loadingStep: 3 }))
+
+        const session: AnalysisSession = {
+          id: String(Date.now()),
+          date: new Date().toISOString(),
+          mode,
+          cvText,
+          jdText,
+          jobTitle: deriveJobTitle(jdText, mode),
+          result,
+          rewrite: rewriteOutcome.status === 'fulfilled' ? rewriteOutcome.value : null,
+          coverLetter:
+            coverLetterOutcome.status === 'fulfilled' ? coverLetterOutcome.value.coverLetter : null,
+        }
+
+        addToHistory(session)
+        setState({ step: 'results', loadingStep: 0, error: null, session })
+      } catch (error) {
+        // A cancelled request is a user action, not a failure to report.
+        if (controller.signal.aborted) return
+
+        setState({
+          step: 'input',
+          loadingStep: 0,
+          error: toDisplayMessage(error),
+          session: null,
+        })
       }
-
-      if (!analyzeResponse.ok || !analyzePayload.success || !analyzePayload.data) {
-        throw new Error(analyzePayload.message ?? 'Unable to analyze this CV.')
-      }
-
-      // ── Step 2: Rewrite + cover letter in parallel ───────────────────────
-      // These two calls are independent of each other — both only need cvText
-      // and jdText which are already available. Running them in parallel
-      // reduces total analysis time by ~35%.
-      setLoadingStep(2)
-      const [rewriteResponse, coverLetterResponse] = await Promise.all([
-        fetch('/api/rewrite', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ cvText, jdText }),
-        }),
-        fetch('/api/cover-letter', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ cvText, jdText }),
-        }),
-      ])
-
-      const [rewritePayload, coverLetterPayload] = await Promise.all([
-        rewriteResponse.json() as Promise<{
-          success?: boolean
-          data?: RewriteResult
-          message?: string
-        }>,
-        coverLetterResponse.json() as Promise<{
-          success?: boolean
-          coverLetter?: string
-          message?: string
-        }>,
-      ])
-
-      if (!rewriteResponse.ok || !rewritePayload.success || !rewritePayload.data) {
-        throw new Error(rewritePayload.message ?? 'Unable to generate CV rewrite.')
-      }
-
-      if (!coverLetterResponse.ok || !coverLetterPayload.success || !coverLetterPayload.coverLetter) {
-        throw new Error(coverLetterPayload.message ?? 'Unable to generate cover letter.')
-      }
-
-      // ── Step 3: Finalise ─────────────────────────────────────────────────
-      setLoadingStep(3)
-
-      const jobTitle = jdText.split(/\n+/)[0]?.trim() ?? 'Role'
-
-      const nextSession: AnalysisSession = {
-        id: `${Date.now()}`,
-        date: new Date().toISOString(),
-        mode,
-        cvText,
-        jdText,
-        jobTitle,
-        result: analyzePayload.data,
-        rewrite: rewritePayload.data,
-        coverLetter: coverLetterPayload.coverLetter,
-      }
-
-      // Use the history abstraction — never touch localStorage directly.
-      const existing = readHistory()
-      writeHistory([nextSession, ...existing].slice(0, 10))
-
-      setSession(nextSession)
-      setStep('results')
-    } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : 'Analysis failed. Please try again.')
-      setStep('input')
-    }
-  }
-
-  function restoreSession(restored: AnalysisSession): void {
-    setSession(restored)
-    setStep('results')
-    setError(null)
-    setLoadingStep(0)
-  }
+    },
+    []
+  )
 
   return {
-    step,
-    loadingStep,
-    error,
-    session,
+    ...state,
     runAnalysis,
-    resetSession,
+    reset,
+    dismissError,
     restoreSession,
+    updateRewrite,
+    updateCoverLetter,
   }
 }

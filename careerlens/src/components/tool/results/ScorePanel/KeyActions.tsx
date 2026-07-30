@@ -1,19 +1,20 @@
 import { ArrowRight } from 'lucide-react'
-import React from 'react'
 
-interface KeyActionsProps {
-  items: string[]
-}
-
-export function KeyActions({ items }: KeyActionsProps) {
+export function KeyActions({ items }: { items: string[] }) {
   return (
-    <div data-testid="key-actions" className="space-y-2">
+    <ul data-testid="key-actions" className="space-y-2">
       {items.map((item) => (
-        <div key={item} className="flex items-start gap-2 rounded-[var(--radius)] bg-[hsl(var(--card-hover))] px-3 py-2 text-sm text-text-muted">
-          <ArrowRight className="mt-0.5 h-4 w-4 text-[hsl(var(--violet))]" />
+        <li
+          key={item}
+          className="flex items-start gap-2 rounded-[var(--radius-sm)] bg-surface-raised px-3 py-2 text-sm text-text-secondary"
+        >
+          <ArrowRight
+            className="mt-0.5 h-4 w-4 shrink-0 text-violet-text"
+            aria-hidden="true"
+          />
           <span>{item}</span>
-        </div>
+        </li>
       ))}
-    </div>
+    </ul>
   )
 }

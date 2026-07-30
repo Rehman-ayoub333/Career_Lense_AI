@@ -1,122 +1,239 @@
 @import "tailwindcss";
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   CareerLens AI — design tokens
+
+   Single source of truth for the visual system. Components reference tokens
+   only; no component contains a raw colour, radius, shadow or duration.
+
+   Colour is expressed as bare HSL channels so a token can be reused at any
+   opacity with `hsl(var(--x) / 0.4)` without declaring a second variable for
+   every alpha step.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 :root {
-  /* Backgrounds */
-  --bg:           222 47% 6%;    /* #0D1117 — main background */
-  --card:         222 47% 9%;    /* #161B22 — card background */
-  --card-hover:   222 47% 12%;   /* hover state */
-  --card-border:  222 47% 16%;   /* subtle borders */
+  /* ── Surfaces ───────────────────────────────────────────────────────────
+     A four-step elevation ramp. Each step is a real lightness increase rather
+     than an overlay, so nesting a card inside a card still reads as depth.   */
+  --bg:            222 47% 6%;
+  --surface:       222 47% 9%;
+  --surface-raised: 222 44% 13%;
+  --surface-hover:  222 42% 16%;
 
-  /* Text */
-  --text-primary: 210 40% 96%;   /* #F0F6FC — primary text */
-  --text-muted:   215 20% 55%;   /* #8B949E — secondary text */
-  --text-subtle:  215 15% 35%;   /* #4B5563 — disabled/placeholder */
+  /* ── Borders ─────────────────────────────────────────────────────────────
+     `border` is a hairline for grouping; `border-strong` marks a focusable or
+     interactive boundary and clears the 3:1 non-text contrast requirement.   */
+  --border:        222 30% 22%;
+  --border-strong: 220 25% 32%;
 
-  /* Accents */
-  --violet:       262 83% 58%;   /* #7C3AED — primary CTA, interactive */
-  --violet-dim:   262 83% 58% / 0.10; /* backgrounds */
-  --amber:        38  92% 50%;   /* #F59E0B — scores, results */
-  --amber-dim:    38  92% 50% / 0.10;
+  /* ── Text ────────────────────────────────────────────────────────────────
+     Three steps, each verified against every surface above. The previous ramp
+     failed WCAG AA: `--text-subtle` measured 2.66:1 on the page background,
+     below even the 3:1 large-text threshold, while being used for character
+     counters, upload hints and footer text.                                  */
+  --text-primary:   210 40% 97%;   /* 18.19:1 on --bg */
+  --text-secondary: 214 22% 74%;   /*  9.98:1 on --bg */
+  --text-muted:     215 16% 60%;   /*  6.51:1 on --bg */
 
-  /* Status */
-  --green:        160 84% 39%;   /* #10B981 — success, matched */
-  --green-dim:    160 84% 39% / 0.10;
-  --red:          0   84% 60%;   /* #F43F5E — error, missing */
-  --red-dim:      0   84% 60% / 0.10;
-  --blue:         217 91% 60%;   /* #3B82F6 — info, good match */
-  --blue-dim:     217 91% 60% / 0.10;
+  /* ── Brand ───────────────────────────────────────────────────────────────
+     `--violet` is a *surface* colour: white text on it measures 5.67:1, so it
+     is safe for buttons and fills, but the colour itself is only 3.44:1 on the
+     page background and must never be used for text. `--violet-text` is the
+     accessible sibling for that job, at 7.94:1.                              */
+  --violet:      262 83% 58%;
+  --violet-text: 262 95% 78%;
 
-  /* Border radius */
-  --radius-sm: 6px;
-  --radius: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
+  /* ── Status ──────────────────────────────────────────────────────────────
+     Two variants each: a saturated tone for fills and icons, and a lighter
+     `-text` tone that meets AA as body copy on any surface.                  */
+  --green:      160 84% 39%;
+  --green-text: 158 72% 55%;
+  --amber:      38 92% 50%;
+  --amber-text: 38 95% 60%;
+  --red:        352 84% 60%;
+  --red-text:   352 88% 70%;
+  --blue:       217 91% 60%;
+  --blue-text:  213 94% 70%;
+
+  /* ── Radii ─────────────────────────────────────────────────────────────── */
+  --radius-sm:   6px;
+  --radius-md:   10px;
+  --radius-lg:   14px;
+  --radius-xl:   20px;
   --radius-full: 9999px;
 
-  /* Shadows */
-  --shadow-card: 0 1px 2px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2);
-  --shadow-elevated: 0 2px 4px rgba(0,0,0,0.3), 0 8px 32px rgba(0,0,0,0.3);
-  --shadow-glow: 0 0 20px hsl(262 83% 58% / 0.15);
+  /* ── Elevation ───────────────────────────────────────────────────────────
+     Two layers per shadow: a tight contact shadow that anchors the element to
+     the surface, and a wide ambient shadow that gives it height. A single
+     blurred shadow reads as a smudge on dark backgrounds.                    */
+  --shadow-sm: 0 1px 2px hsl(222 60% 2% / 0.4);
+  --shadow-md: 0 1px 2px hsl(222 60% 2% / 0.4), 0 4px 12px hsl(222 60% 2% / 0.35);
+  --shadow-lg: 0 2px 4px hsl(222 60% 2% / 0.4), 0 12px 32px hsl(222 60% 2% / 0.45);
+  --shadow-focus: 0 0 0 3px hsl(var(--violet) / 0.35);
 
-  /* Typography */
-  --font-inter: 'Inter', sans-serif;
-  --font-geist: 'Geist', monospace;
-  --text-xs: 11px / 1.5;
-  --text-sm: 13px / 1.6;
-  --text-base: 15px / 1.7;
-  --text-lg: 18px / 1.5;
-  --text-xl: 24px / 1.3;
-  --text-2xl: 32px / 1.2;
-  --text-3xl: 48px / 1.1;
-  --text-hero: 64px / 1.0;
+  /* ── Glow ────────────────────────────────────────────────────────────────
+     A brand accent, not an elevation step — it carries no directional light,
+     so it cannot communicate height. Nine ad-hoc glow values were previously
+     spread across six components (0 0 16/20/24/32/40px at five alphas); these
+     two replace all of them, and are permitted only on the primary button and
+     the active tab pill.                                                     */
+  --glow-violet: 0 0 20px hsl(var(--violet) / 0.25);
+  --glow-violet-strong: 0 0 32px hsl(var(--violet) / 0.4);
 
-  /* Weights */
-  --fw-normal: 400;
-  --fw-medium: 500;
-  --fw-semibold: 600;
-  --fw-bold: 700;
-  --fw-black: 800;
+  /* ── Glass ───────────────────────────────────────────────────────────────
+     One blur radius for all translucent chrome. Previously `backdrop-blur-xl`
+     on the navbar, `-md` on the loading overlay and `-sm` on two dialogs, with
+     scrim opacities of 0.75, 0.8, 0.85 and 0.92. Glass is for fixed or sticky
+     chrome and modal scrims only — never a card in the content flow.         */
+  --glass-blur: 16px;
+  --glass-bg: hsl(var(--bg) / 0.8);
+
+  /* ── Motion ──────────────────────────────────────────────────────────────
+     One easing curve for entrances and one for exits, so unrelated components
+     still feel like they belong to the same product.                         */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   Tailwind theme
+
+   Maps tokens onto utility classes. This is the whole configuration — Tailwind
+   v4 is CSS-first, so there is no `tailwind.config.ts`. (One existed in this
+   repo and was silently dead: v4 ignores it without an explicit `@config`
+   directive, so its colours, keyframes and `darkMode` setting had no effect.)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 @theme {
-  --color-background: hsl(var(--bg));
-  --color-card: hsl(var(--card));
-  --color-card-hover: hsl(var(--card-hover));
-  --color-card-border: hsl(var(--card-border));
+  --color-bg: hsl(var(--bg));
+  --color-surface: hsl(var(--surface));
+  --color-surface-raised: hsl(var(--surface-raised));
+  --color-surface-hover: hsl(var(--surface-hover));
+
+  --color-border: hsl(var(--border));
+  --color-border-strong: hsl(var(--border-strong));
+
   --color-text-primary: hsl(var(--text-primary));
+  --color-text-secondary: hsl(var(--text-secondary));
   --color-text-muted: hsl(var(--text-muted));
-  --color-text-subtle: hsl(var(--text-subtle));
+
   --color-violet: hsl(var(--violet));
-  --color-violet-dim: hsl(var(--violet-dim));
-  --color-amber: hsl(var(--amber));
-  --color-amber-dim: hsl(var(--amber-dim));
+  --color-violet-text: hsl(var(--violet-text));
   --color-green: hsl(var(--green));
-  --color-green-dim: hsl(var(--green-dim));
+  --color-green-text: hsl(var(--green-text));
+  --color-amber: hsl(var(--amber));
+  --color-amber-text: hsl(var(--amber-text));
   --color-red: hsl(var(--red));
-  --color-red-dim: hsl(var(--red-dim));
+  --color-red-text: hsl(var(--red-text));
   --color-blue: hsl(var(--blue));
-  --color-blue-dim: hsl(var(--blue-dim));
+  --color-blue-text: hsl(var(--blue-text));
 
-  --font-sans: var(--font-inter), system-ui, sans-serif;
-  --font-mono: var(--font-geist), monospace;
+  /* Fonts are supplied by `next/font` in layout.tsx, which self-hosts them —
+     no third-party request, no layout shift, and nothing for the CSP to allow. */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
 
-  --animate-pulse-border: pulse-border 2s ease-in-out infinite;
-  --animate-skeleton: skeleton 1.5s ease-in-out infinite;
+  /* A tightened type scale. Optical sizing: larger text gets tighter leading
+     and negative tracking, small text gets more of both to stay legible.
+     Nothing renders below 12px — the previous 11px badges and counters were
+     under the practical floor for sustained reading.                          */
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.5;
+  --text-xs--letter-spacing: 0.005em;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.6;
+  --text-base: 0.9375rem;
+  --text-base--line-height: 1.65;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.55;
+  --text-lg--letter-spacing: -0.01em;
+  --text-xl: 1.375rem;
+  --text-xl--line-height: 1.4;
+  --text-xl--letter-spacing: -0.015em;
+  --text-2xl: 1.75rem;
+  --text-2xl--line-height: 1.3;
+  --text-2xl--letter-spacing: -0.02em;
+  --text-3xl: 2.25rem;
+  --text-3xl--line-height: 1.2;
+  --text-3xl--letter-spacing: -0.025em;
+  --text-4xl: 3rem;
+  --text-4xl--line-height: 1.1;
+  --text-4xl--letter-spacing: -0.03em;
+  --text-5xl: 3.75rem;
+  --text-5xl--line-height: 1.03;
+  --text-5xl--letter-spacing: -0.035em;
 
-  @keyframes pulse-border {
-    0%, 100% { border-color: hsl(var(--card-border)); }
-    50% { border-color: hsl(var(--violet)); }
-  }
+  /* Reserved for the score gauge numeral, which is a graphic element rather
+     than text and needs a size the prose scale has no business carrying. */
+  --text-display: 4.5rem;
+  --text-display--line-height: 1;
+  --text-display--letter-spacing: -0.03em;
+}
 
-  @keyframes skeleton {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-  }
+/* ═══════════════════════════════════════════════════════════════════════════
+   Base
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/*
+  Declares the app as dark to the browser itself. Without it, native UI the
+  page does not style — scrollbars, form autofill, date pickers, the file
+  picker button — renders in light chrome against a near-black background.
+*/
+:root {
+  color-scheme: dark;
 }
 
 html {
   scroll-behavior: smooth;
+  /* Keeps anchor targets clear of the sticky header. */
+  scroll-padding-top: 5rem;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   background-color: hsl(var(--bg));
   color: hsl(var(--text-primary));
-  font-family: var(--font-inter), system-ui, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
-/* Refined focus ring for all interactive elements */
+/*
+  One focus ring for the entire application, on `:focus-visible` only so it
+  appears for keyboard users without outlining every clicked button. Two rings
+  — a dark inner and a bright outer — keep it visible against both the page
+  background and a violet button.
+*/
 :focus-visible {
-  outline: 2px solid hsl(var(--violet));
+  outline: 2px solid hsl(var(--violet-text));
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
-/* Custom scrollbar for dark theme */
+/* Numeric UI (scores, counters, percentages) should not reflow as it animates. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+::selection {
+  background-color: hsl(var(--violet) / 0.35);
+  color: hsl(var(--text-primary));
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border-strong)) transparent;
+}
+
+/* WebKit */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -124,35 +241,34 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--card-border));
-  border-radius: 3px;
+  background: hsl(var(--border-strong));
+  border-radius: var(--radius-full);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--text-subtle));
+  background: hsl(var(--text-muted));
 }
 
-/* Textarea and input polish */
-textarea,
-input[type="text"] {
-  scrollbar-width: thin;
-  scrollbar-color: hsl(var(--card-border)) transparent;
-}
+/*
+  Reduced motion.
 
-/* Selection color */
-::selection {
-  background-color: hsl(var(--violet) / 0.3);
-  color: hsl(var(--text-primary));
-}
-
+  Animations are suppressed rather than merely shortened, and `scroll-behavior`
+  is reset, because the vestibular triggers here are the scroll-linked entrance
+  animations and the smooth anchor scrolling. Framer Motion is additionally told
+  about the preference in layout.tsx via `MotionConfig`, so JS-driven springs
+  stop too — a CSS-only rule cannot reach those.
+*/
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
 
-  * {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

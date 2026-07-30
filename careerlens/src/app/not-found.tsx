@@ -1,21 +1,27 @@
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
+import { buttonClasses } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
+import { Container } from '@/components/ui/Container'
+
 export default function NotFound() {
   return (
-    <main className="mx-auto flex min-h-[60vh] max-w-md items-center justify-center px-4 py-12">
-      <div className="w-full rounded-[var(--radius-lg)] border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-8 text-center shadow-[var(--shadow-card)]">
-        <div className="text-[72px] font-black leading-none text-text-subtle">404</div>
-        <h1 className="mt-3 text-xl font-bold text-text-primary">Page not found</h1>
-        <p className="mt-2 text-sm text-text-muted">The page you are looking for does not exist.</p>
-        <Link
-          href="/"
-          className="mt-6 inline-flex items-center gap-2 rounded-full bg-[hsl(var(--violet))] px-6 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:shadow-[0_0_20px_hsl(var(--violet)/0.3)] active:scale-[0.98]"
-        >
-          <ArrowLeft className="h-4 w-4" />
+    <Container as="main" width="panel" className="flex min-h-[60vh] items-center justify-center py-12">
+      <Card elevation="overlay" className="w-full p-8 text-center">
+        <p className="tabular text-display font-bold text-text-muted">404</p>
+        <h1 className="mt-3 text-xl font-semibold text-text-primary">Page not found</h1>
+        <p className="mt-2 text-sm text-text-secondary">
+          The page you are looking for does not exist.
+        </p>
+
+        {/* `next/link` rather than `LinkButton`: this is internal navigation, so
+            it should stay client-side and prefetched. */}
+        <Link href="/" className={buttonClasses({ className: 'mt-6' })}>
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Back to home
         </Link>
-      </div>
-    </main>
+      </Card>
+    </Container>
   )
 }

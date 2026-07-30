@@ -1,95 +1,110 @@
-import { CircleAlert } from 'lucide-react'
-import { motion } from 'framer-motion'
-import React from 'react'
+'use client'
 
-import { EmptyState } from '@/components/shared/EmptyState'
-import { Tag } from '@/components/shared/Tag'
+import { motion } from 'framer-motion'
+import { CircleAlert } from 'lucide-react'
+
+import { Tag, type TagVariant } from '@/components/ui/Badge'
+import { EmptyState } from '@/components/ui/Feedback'
+import { MOTION } from '@/config/design-tokens'
 import type { AnalysisMode, AnalysisResult } from '@/types'
 
-interface SkillsTabProps {
-  result: AnalysisResult
-  mode: AnalysisMode
+interface Group {
+  title: string
+  variant: TagVariant
+  items: string[]
 }
 
-export function SkillsTab({ result, mode }: SkillsTabProps) {
-  const isScholarship = mode === 'scholarship'
+function groupsFor(result: AnalysisResult, mode: AnalysisMode): Group[] {
+  if (mode === 'scholarship') {
+    return [
+      {
+        title: `Application Strengths (${result.skills_matched.length})`,
+        variant: 'match',
+        items: result.skills_matched,
+      },
+      {
+        title: `Gaps to Address (${result.skills_missing.length})`,
+        variant: 'missing',
+        items: result.skills_missing,
+      },
+    ]
+  }
 
-  const groups = isScholarship
-    ? [
-        {
-          title: `Application Strengths (${result.skills_matched.length})`,
-          variant: 'match' as const,
-          items: result.skills_matched,
-        },
-        {
-          title: `Gaps to Address (${result.skills_missing.length})`,
-          variant: 'missing' as const,
-          items: result.skills_missing,
-        },
-      ]
-    : [
-        {
-          title: `Skills You Have (${result.skills_matched.length})`,
-          variant: 'match' as const,
-          items: result.skills_matched,
-        },
-        {
-          title: `Skills Missing (${result.skills_missing.length})`,
-          variant: 'missing' as const,
-          items: result.skills_missing,
-        },
-        {
-          title: `Bonus Skills (${result.skills_extra.length})`,
-          variant: 'extra' as const,
-          items: result.skills_extra,
-        },
-      ]
+  return [
+    {
+      title: `Skills You Have (${result.skills_matched.length})`,
+      variant: 'match',
+      items: result.skills_matched,
+    },
+    {
+      title: `Skills Missing (${result.skills_missing.length})`,
+      variant: 'missing',
+      items: result.skills_missing,
+    },
+    {
+      title: `Bonus Skills (${result.skills_extra.length})`,
+      variant: 'extra',
+      items: result.skills_extra,
+    },
+  ]
+}
+
+export function SkillsTab({ result, mode }: { result: AnalysisResult; mode: AnalysisMode }) {
+  const isScholarship = mode === 'scholarship'
+  const tips = result.scholarship_specific_tips ?? []
 
   return (
     <div data-testid="skills-tab" className="space-y-4">
-      {groups.map((group, groupIndex) => (
+      {groupsFor(result, mode).map((group, index) => (
         <div key={group.title} className="space-y-2">
-          <div className="text-sm font-semibold text-text-primary">{group.title}</div>
+          <h3 className="text-sm font-semibold text-text-primary">{group.title}</h3>
+
           {group.items.length > 0 ? (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2, delay: groupIndex * 0.06 }}
+              transition={{
+                duration: MOTION.duration.base,
+                delay: index * MOTION.stagger,
+                ease: MOTION.easeOut,
+              }}
               className="flex flex-wrap gap-2"
             >
               {group.items.map((item) => (
-                <Tag key={item} label={item} variant={group.variant} />
+                <Tag key={item} variant={group.variant}>
+                  {item}
+                </Tag>
               ))}
             </motion.div>
           ) : (
             <EmptyState
               icon={CircleAlert}
-              title={
+              title={isScholarship ? 'No data detected for this section' : 'No skills detected'}
+              description={
                 isScholarship
-                  ? 'No data detected for this section.'
-                  : "We couldn't detect specific skills. Try adding more technical details to your CV."
+                  ? undefined
+                  : 'Try adding more technical detail to your CV so the analysis has something to match against.'
               }
             />
           )}
         </div>
       ))}
 
-      {/* Scholarship-specific tips section */}
-      {isScholarship && result.scholarship_specific_tips && result.scholarship_specific_tips.length > 0 && (
+      {isScholarship && tips.length > 0 ? (
         <div className="space-y-2">
-          <div className="text-sm font-semibold text-text-primary">Scholarship-Specific Tips</div>
+          <h3 className="text-sm font-semibold text-text-primary">Scholarship-Specific Tips</h3>
           <ul className="space-y-2">
-            {result.scholarship_specific_tips.map((tip) => (
+            {tips.map((tip) => (
               <li
                 key={tip}
-                className="rounded-[var(--radius)] border border-[hsl(var(--violet)/0.3)] bg-[hsl(var(--violet-dim))] px-3 py-2 text-sm text-text-primary"
+                className="rounded-[var(--radius-sm)] border border-[hsl(var(--violet)/0.35)] bg-[hsl(var(--violet)/0.12)] px-3 py-2 text-sm text-text-primary"
               >
                 {tip}
               </li>
             ))}
           </ul>
         </div>
-      )}
+      ) : null}
     </div>
   )
 }
