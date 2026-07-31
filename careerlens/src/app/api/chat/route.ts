@@ -1,5 +1,5 @@
 import { generateText } from '@/lib/ai'
-import { AI_TIMEOUT_MS, INPUT_LIMITS, ROUTE_MAX_DURATION_SECONDS } from '@/lib/analysis/constants'
+import { AI_TIMEOUT_MS, INPUT_LIMITS } from '@/lib/analysis/constants'
 import type { ChatResponse } from '@/lib/api/contract'
 import { createApiRoute, readJsonBody } from '@/lib/api/route'
 import { CHAT_SYSTEM_PROMPT, getChatPrompt } from '@/lib/prompts'
@@ -7,7 +7,7 @@ import { checkAiRateLimit } from '@/lib/rate-limit'
 import { parseObjectBody, parseStringArray, parseTextField, sanitizeText } from '@/lib/validators'
 
 export const runtime = 'nodejs'
-export const maxDuration = ROUTE_MAX_DURATION_SECONDS
+export const maxDuration = 60
 
 /**
  * Context sent with each chat turn.

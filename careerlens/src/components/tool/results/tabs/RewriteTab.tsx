@@ -94,7 +94,7 @@ export function RewriteTab({
             {rewrite.original_bullets.map((bullet, index) => (
               <li
                 key={`original-${index}`}
-                className="rounded-[var(--radius-sm)] bg-surface-raised px-3 py-2.5 text-sm text-text-secondary"
+                className="rounded-[var(--radius-sm)] bg-surface-raised p-3 text-sm text-text-secondary"
               >
                 {bullet}
               </li>
@@ -110,7 +110,7 @@ export function RewriteTab({
               return (
                 <li
                   key={key}
-                  className="rounded-[var(--radius-sm)] border border-border bg-surface-raised px-3 py-2.5 text-sm text-text-primary"
+                  className="rounded-[var(--radius-sm)] border border-border bg-surface-raised p-3 text-sm text-text-primary"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <span>{bullet}</span>

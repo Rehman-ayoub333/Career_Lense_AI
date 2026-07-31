@@ -69,13 +69,13 @@ function emit(level: LogLevel, message: string, context?: LogContext): void {
   const line = isProduction() ? JSON.stringify(record) : `[${level}] ${message}`
   const extra = isProduction() ? undefined : context ? redact(context) : undefined
 
-  /* eslint-disable no-console -- the single sanctioned console call site; see module docs */
+  // The single sanctioned console call site in the application; see module docs.
+  // Everything else routes through `logger` so output stays structured.
   if (level === 'error') {
     console.error(line, extra ?? '')
   } else {
     console.warn(line, extra ?? '')
   }
-  /* eslint-enable no-console */
 }
 
 export const logger = {

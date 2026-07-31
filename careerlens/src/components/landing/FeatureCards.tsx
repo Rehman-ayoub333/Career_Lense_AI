@@ -49,7 +49,7 @@ export function FeatureCards() {
             }}
           >
             <Card as="article" interactive className="group h-full p-6">
-              <div className="mb-4 inline-flex rounded-[var(--radius-md)] bg-[hsl(var(--violet)/0.12)] p-2.5 text-violet-text transition-colors duration-200 ease-out group-hover:bg-[hsl(var(--violet)/0.18)]">
+              <div className="mb-4 inline-flex rounded-[var(--radius-md)] bg-[hsl(var(--violet)/0.12)] p-3 text-violet-text transition-colors duration-200 ease-out group-hover:bg-[hsl(var(--violet)/0.18)]">
                 <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" />
               </div>
               <h3 className="text-lg font-semibold text-text-primary">{title}</h3>

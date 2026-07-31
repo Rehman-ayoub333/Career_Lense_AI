@@ -1,5 +1,5 @@
 import { generateJson } from '@/lib/ai'
-import { AI_TIMEOUT_MS, INPUT_LIMITS, ROUTE_MAX_DURATION_SECONDS } from '@/lib/analysis/constants'
+import { AI_TIMEOUT_MS, INPUT_LIMITS } from '@/lib/analysis/constants'
 import { isAnalysisResult, normalizeAnalysisResult } from '@/lib/analysis/guards'
 import { ANALYSIS_SCHEMA, SCHOLARSHIP_ANALYSIS_SCHEMA } from '@/lib/analysis/schemas'
 import { createApiRoute, readJsonBody } from '@/lib/api/route'
@@ -21,8 +21,11 @@ export const runtime = 'nodejs'
  * Declared so the platform's function ceiling sits *above* our own budget.
  * Without it the host's default (10s on several plans) fires first, and the
  * browser receives an opaque gateway error page instead of our timeout message.
+ *
+ * Must be a literal: Next only statically analyses literal segment configs, and
+ * an imported constant here fails the build. Kept in step with `AI_TIMEOUT_MS`.
  */
-export const maxDuration = ROUTE_MAX_DURATION_SECONDS
+export const maxDuration = 60
 
 export const POST = createApiRoute<AnalysisResult>({
   name: 'analyze',

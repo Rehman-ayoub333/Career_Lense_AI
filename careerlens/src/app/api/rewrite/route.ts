@@ -1,5 +1,5 @@
 import { generateJson } from '@/lib/ai'
-import { AI_TIMEOUT_MS, INPUT_LIMITS, ROUTE_MAX_DURATION_SECONDS } from '@/lib/analysis/constants'
+import { AI_TIMEOUT_MS, INPUT_LIMITS } from '@/lib/analysis/constants'
 import { isRewriteResult, normalizeRewriteResult } from '@/lib/analysis/guards'
 import { REWRITE_SCHEMA } from '@/lib/analysis/schemas'
 import { createApiRoute, readJsonBody } from '@/lib/api/route'
@@ -9,7 +9,7 @@ import { parseObjectBody, parseTextField } from '@/lib/validators'
 import type { RewriteResult } from '@/types'
 
 export const runtime = 'nodejs'
-export const maxDuration = ROUTE_MAX_DURATION_SECONDS
+export const maxDuration = 60
 
 export const POST = createApiRoute<RewriteResult>({
   name: 'rewrite',

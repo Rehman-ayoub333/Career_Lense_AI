@@ -1,5 +1,5 @@
 import { generateText } from '@/lib/ai'
-import { AI_TIMEOUT_MS, INPUT_LIMITS, ROUTE_MAX_DURATION_SECONDS } from '@/lib/analysis/constants'
+import { AI_TIMEOUT_MS, INPUT_LIMITS } from '@/lib/analysis/constants'
 import type { CoverLetterResponse } from '@/lib/api/contract'
 import { createApiRoute, readJsonBody } from '@/lib/api/route'
 import { AppError } from '@/lib/errors'
@@ -8,7 +8,7 @@ import { checkAiRateLimit } from '@/lib/rate-limit'
 import { parseObjectBody, parseTextField } from '@/lib/validators'
 
 export const runtime = 'nodejs'
-export const maxDuration = ROUTE_MAX_DURATION_SECONDS
+export const maxDuration = 60
 
 /** A three-paragraph letter that comes back this short is a truncated generation. */
 const MIN_LETTER_CHARS = 200

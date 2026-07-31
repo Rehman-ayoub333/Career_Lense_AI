@@ -114,7 +114,7 @@ export function Modal({
               SIZES[size]
             )}
           >
-            <header className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
+            <header className="flex items-center justify-between gap-3 border-b border-border px-6 py-4">
               <div className="min-w-0">
                 <h2 id={titleId} className="truncate text-sm font-semibold text-text-primary">
                   {title}
@@ -140,7 +140,7 @@ export function Modal({
               </div>
             </header>
 
-            <div className="px-5 py-4">{children}</div>
+            <div className="px-6 py-4">{children}</div>
           </motion.div>
         </motion.div>
       ) : null}

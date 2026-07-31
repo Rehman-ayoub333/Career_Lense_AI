@@ -24,6 +24,14 @@ const GREETING: ChatMessage = {
   status: 'ok',
 }
 
+function AssistantAvatar() {
+  return (
+    <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--violet)/0.12)]">
+      <MessageSquare className="h-3.5 w-3.5 text-violet-text" strokeWidth={2.25} aria-hidden="true" />
+    </div>
+  )
+}
+
 export function ChatTab({ session }: { session: AnalysisSession }) {
   const [messages, setMessages] = useState<ChatMessage[]>([GREETING])
   const [input, setInput] = useState('')
@@ -95,13 +103,7 @@ export function ChatTab({ session }: { session: AnalysisSession }) {
           >
             {message.role === 'assistant' ? (
               <div className="flex max-w-[85%] gap-2.5">
-                <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--violet)/0.12)]">
-                  <MessageSquare
-                    className="h-3.5 w-3.5 text-violet-text"
-                    strokeWidth={2.25}
-                    aria-hidden="true"
-                  />
-                </div>
+                <AssistantAvatar />
                 <div
                   className={cn(
                     'rounded-[var(--radius-lg)] rounded-tl-[var(--radius-sm)] px-4 py-2.5 text-sm',
@@ -124,13 +126,7 @@ export function ChatTab({ session }: { session: AnalysisSession }) {
         {isLoading ? (
           <div className="flex justify-start">
             <div className="flex gap-2.5">
-              <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--violet)/0.12)]">
-                <MessageSquare
-                  className="h-3.5 w-3.5 text-violet-text"
-                  strokeWidth={2.25}
-                  aria-hidden="true"
-                />
-              </div>
+              <AssistantAvatar />
               <div className="flex items-center gap-2 rounded-[var(--radius-lg)] rounded-tl-[var(--radius-sm)] bg-surface-raised px-4 py-2.5 text-sm text-text-secondary">
                 <LoaderCircle className="h-3.5 w-3.5 animate-spin" strokeWidth={2.25} aria-hidden="true" />
                 Thinking…

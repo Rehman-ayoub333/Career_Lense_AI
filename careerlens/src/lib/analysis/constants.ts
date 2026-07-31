@@ -32,6 +32,12 @@ export const HISTORY_LIMIT = 10
  * Each must stay below the platform function ceiling declared as `maxDuration` on
  * the route, so the app returns its own friendly timeout rather than letting the
  * host return an opaque gateway error page.
+ *
+ * That ceiling is `export const maxDuration = 60` in each AI route. It cannot be
+ * imported from here: Next only statically analyses *literal* segment configs,
+ * and an imported binding fails the production build outright. The literal and
+ * these budgets therefore have to be kept in step by hand — if you raise one
+ * above 60 000, raise `maxDuration` in the four AI routes to match.
  */
 export const AI_TIMEOUT_MS = {
   analyze: 45_000,
@@ -39,9 +45,6 @@ export const AI_TIMEOUT_MS = {
   coverLetter: 45_000,
   chat: 20_000,
 } as const
-
-/** Declared `maxDuration` for AI routes, in seconds. Must exceed the budgets above. */
-export const ROUTE_MAX_DURATION_SECONDS = 60
 
 export const SCORE_BANDS = [
   { min: 0, max: 40, verdict: 'Weak Match', token: 'red' },
