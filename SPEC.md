@@ -55,7 +55,13 @@ Built by a final-year CS student in Pakistan applying for European MS scholarshi
 
 ### Non-Negotiables (These Must Exist in v1)
 1. **Scholarship Mode** — match CV against scholarship criteria, not just job JDs. No competitor has this.
-2. **Pre-loaded demo** — tool is already running with sample data on landing. No blank canvas.
+2. **Pre-loaded demo** — the tool is already running with sample data. No blank canvas.
+   *(Amended, landing redesign Pass 1.)* Originally "on landing". The tool now
+   lives on `/analyze` rather than on `/`, because a landing page that opens with
+   an upload field asks for the visitor's CV before it has given them a reason to
+   hand it over. The rule's intent is unchanged and still enforced: `/analyze`
+   opens pre-populated with a sample CV and job description, so the first screen
+   of the application is never empty. What moved is *where*, not *whether*.
 3. **Shareable score card** — downloadable/shareable image of the match result. The viral loop.
 
 ---
@@ -450,17 +456,52 @@ LANDING PAGE
 
 **Sections top to bottom:**
 
-**Section A — Navbar**
-- Logo left: "CareerLens AI" with target emoji
-- Right: "How it works" anchor link + "Analyze Now" CTA button (violet)
-- Sticky, backdrop blur, border bottom
+**Section A — Navbar** *(revised, Pass 1)*
+- 72px tall, sticky. Logo left, "How it works" + "Analyze my CV" CTA right.
+- Glass ARRIVES rather than being permanent: transparent over the hero so the
+  artwork is not sitting under a grey shelf, acquiring its surface across the
+  first 80px of scroll. Implemented as a separate layer whose `opacity` is driven
+  straight from scroll position — no React state, no re-render while scrolling.
+- No height compression on scroll. Animating `height` relayouts the document
+  every frame, which is not worth the jank on the hardware this audience uses.
+- Links are never conditional. The navbar must not change shape under the user.
+- With the tool off the landing page, the CTA is the only persistent route into
+  the product and stays visible at every breakpoint.
 
-**Section B — Hero**
-- Headline: "Stop guessing why your CV gets rejected"
-- Subheadline: "Upload your CV, paste any job description or scholarship criteria. Get your match score, skill gaps, and a rewritten CV in 30 seconds. Free. No signup."
-- Two CTA buttons: "Analyze My CV →" (violet, primary) and "See Demo" (ghost)
-- Below buttons: "Used by 500+ applicants from 12 countries" (update with real numbers after launch)
-- Trust badges: "Free Forever" · "No Signup" · "Data Never Stored"
+**Section B — Hero** *(revised, Pass 1)*
+- Full viewport, left-aligned editorial composition. Copy left, artwork right.
+- Headline: "Stop *guessing* why your CV gets rejected" — one word set in the
+  editorial serif (`--font-display`), italic. Emphasis by typeface, never by
+  gradient: clipped gradient text is the clearest signature of a generated
+  marketing page and has no measurable contrast ratio.
+- Subheadline: "Three in four CVs are filtered out by software before a person
+  ever reads them. See what that software sees — and exactly what to change."
+- ONE CTA: "Analyze my CV →" linking to `/analyze`. The secondary CTA was
+  removed; it split intent at the moment intent peaked.
+- Trust line at `--text-secondary`, not `--text-muted`: "Free forever · No
+  account · Your CV is never stored". This is a promise, not a disclaimer.
+- Origin line: "Built in Faisalabad, by someone applying to the same
+  scholarships."
+- REMOVED: the badge above the headline, which restated the trust line.
+- Social proof ("Used by 500+ applicants…") is deferred to Pass 4 and must not
+  ship until the figure is real — scholarship reviewers are a stated audience
+  (§2) and an invented metric in front of them is unrecoverable.
+
+**Section B1 — Hero artwork: "Registration"**
+- *Registration* is the print term for two layers of a run lining up. Out of
+  register a sheet prints doubled and colour-fringed; in register it resolves.
+  That is the product's argument — a CV is rarely bad, it is out of register with
+  what was asked for — so the artwork performs it rather than illustrating it.
+- Two tinted copies of an abstracted document, one cool and one warm, converge
+  into register. Matched rules consolidate into single clean strokes. Where a
+  requirement has no counterpart, a hollow amber outline is left behind: the
+  shape of what is missing. Print registration marks frame the field.
+- It ends deliberately imperfect — three gaps stay open. A full resolve would
+  misrepresent the product, whose value is naming the gaps.
+- No screenshot, no image, no canvas, no 3D, no new dependency. DOM and one
+  inline SVG. Only `opacity` and `transform` animate.
+- `aria-hidden` in full: the figures are illustrative, and announcing "8 matched,
+  3 gaps" would describe an analysis the visitor has not run.
 
 **Section C — Live Demo Preview**
 - Headline: "Here's what your analysis looks like"
@@ -474,10 +515,10 @@ LANDING PAGE
 - Card 2: "ATS Simulation" — "Know exactly which ATS checks your CV passes or fails before you apply."
 - Card 3: "Instant Rewrite" — "AI rewrites your bullets with the exact keywords the job description uses."
 
-**Section E — The Tool** (anchor: `#analyze`)
-- This is where FR-01 through FR-03 live
-- Upload zone + JD textarea + Mode selector + Analyze button
-- Results appear here after analysis (input section slides up, results slide down)
+**Section E — The Tool** — ⚠ MOVED to Screen 1b (`/analyze`), Pass 1.
+- The landing page contains no CV input of any kind. Its only conversion path is
+  a link to `/analyze`.
+- FR-01 through FR-03 now live on Screen 1b below.
 
 **Section F — Footer**
 - "Built by Rehman Ayoub · Pakistan · 2026"
@@ -486,7 +527,25 @@ LANDING PAGE
 
 ---
 
-### Screen 2: Results State (same page, replaces input)
+### Screen 1b: The Application (`/analyze`) — added Pass 1
+
+**Purpose:** do the work. Everything the visitor was sold on the landing page.
+
+- Owns FR-01 through FR-03: upload zone, CV textarea, JD textarea, mode selector,
+  analyze button — and the loading and results states that follow.
+- Opens pre-populated with a sample CV and job description, satisfying
+  non-negotiable #2. The first screen of the application is never blank.
+- Statically prerendered. The landing page no longer carries the tool's bundle.
+- Carries a visually-hidden `h1`. The landing page used to supply the document's
+  only top-level heading; a designed page header lands when this screen is
+  itself redesigned, which is not Pass 1.
+- **Known gap:** `/#analyze` deep links no longer resolve. A fragment cannot be
+  redirected server-side. Accepted because the launch (§32) has not run, so few
+  external links exist — but any that were published must be updated.
+
+---
+
+### Screen 2: Results State (on `/analyze`, replaces input)
 
 **Layout:** Two-column on desktop. Single column on mobile.
 

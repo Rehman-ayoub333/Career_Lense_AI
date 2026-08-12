@@ -10,8 +10,9 @@ import { Container } from '@/components/ui/Container'
 import { Alert } from '@/components/ui/Feedback'
 import { TextareaField } from '@/components/ui/Textarea'
 import { MOTION } from '@/config/design-tokens'
-import { LOADING_STEPS, useAnalysis } from '@/hooks/useAnalysis'
+import { LOADING_STEPS, type AnalysisController } from '@/hooks/useAnalysis'
 import { INPUT_LIMITS } from '@/lib/analysis/constants'
+import { MODE_LABEL } from '@/lib/format'
 import type { AnalysisMode } from '@/types'
 
 import { HistoryPanel } from './history/HistoryPanel'
@@ -27,15 +28,10 @@ const DEMO_CV =
 const DEMO_JD =
   'We are looking for a strong frontend engineer with React, TypeScript, UI performance optimization, and experience shipping production web applications. Candidate should be comfortable with accessible interfaces, API integration, and working across product and engineering teams.'
 
-const JD_LABELS: Record<AnalysisMode, string> = {
-  job: 'Job Description',
-  scholarship: 'Scholarship Criteria',
-}
-
 const JD_PLACEHOLDERS: Record<AnalysisMode, string> = {
-  job: 'Paste the full job description here.\n\nInclude responsibilities, required skills, and qualifications for the best analysis.',
+  job: 'Paste the full job description here.\n\nInclude responsibilities, required skills, and qualifications so every stated requirement can be checked.',
   scholarship:
-    'Paste the scholarship criteria here.\n\nInclude eligibility requirements, evaluation criteria, and program details.',
+    'Paste the scholarship criteria here.\n\nInclude eligibility requirements, evaluation criteria, and programme details so every stated requirement can be checked.',
 }
 
 const CV_PLACEHOLDER =
@@ -47,8 +43,8 @@ const SECTION_MOTION = {
   transition: { duration: MOTION.duration.slow, ease: MOTION.easeOut },
 }
 
-export function AnalyzeTool() {
-  const { step, loadingStep, session, error, runAnalysis, reset, restoreSession } = useAnalysis()
+export function AnalyzeTool({ analysis }: { analysis: AnalysisController }) {
+  const { step, loadingStep, session, error, runAnalysis, reset, restoreSession } = analysis
   const [mode, setMode] = useState<AnalysisMode>('job')
   const [cvText, setCvText] = useState(DEMO_CV)
   const [jdText, setJdText] = useState(DEMO_JD)
@@ -104,7 +100,7 @@ export function AnalyzeTool() {
 
             <div className="flex flex-col gap-4">
               <TextareaField
-                label={JD_LABELS[mode]}
+                label={MODE_LABEL[mode]}
                 testId="jd-textarea"
                 value={jdText}
                 onChange={setJdText}
@@ -127,8 +123,8 @@ export function AnalyzeTool() {
                 }
                 onClick={() => void runAnalysis(cvText, jdText, mode)}
               >
-                <Sparkles className="h-4 w-4" aria-hidden="true" />
-                Analyze Match
+                <Sparkles className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
+                Analyse match
               </Button>
 
               {error ? <Alert tone="error">{error}</Alert> : null}

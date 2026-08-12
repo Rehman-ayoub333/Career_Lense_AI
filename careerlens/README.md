@@ -24,11 +24,11 @@ Free, no-signup AI-powered CV analyzer that gives you a match score, ATS compati
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | Next.js 15 (App Router) |
+| Framework | Next.js 16 (App Router) |
 | Language | TypeScript (strict mode) |
 | Styling | Tailwind CSS 4 + CSS variables |
 | Animations | Framer Motion |
-| AI | Anthropic Claude (claude-sonnet-4-6) with Gemini fallback |
+| AI | Google Gemini (gemini-2.5-flash) |
 | PDF Parsing | pdf-parse v2 |
 | Icons | Lucide React |
 | Deployment | Vercel |
@@ -46,22 +46,23 @@ src/
 │   │   ├── upload/       # PDF/DOCX text extraction
 │   │   ├── health/       # Health check
 │   │   └── share/        # Share card info
+│   ├── analyze/          # The application: upload, inputs, results
 │   └── privacy/          # Privacy policy page
 ├── components/
-│   ├── landing/          # Hero, features, demo preview
+│   ├── landing/          # Marketing sections; hero/ holds the hero artwork
 │   ├── layout/           # Navbar, footer
-│   ├── shared/           # Badge, Tag, ProgressBar, etc.
-│   └── tool/             # Analysis tool UI + results tabs
-├── hooks/                # useAnalysis (state + API orchestration)
-├── lib/                  # claude.ts, prompts.ts, history.ts, etc.
-├── types/                # All TypeScript types (single source)
-└── utils/                # Score color mapping
+│   ├── tool/             # Analysis tool UI + results tabs
+│   └── ui/               # Shared primitives: Button, Card, Modal, Tabs, …
+├── config/               # Design tokens, site constants
+├── hooks/                # useAnalysis, useClipboard, useFocusTrap
+├── lib/                  # ai/, api/, analysis/, prompts.ts, history.ts, …
+└── types/                # All TypeScript types (single source)
 ```
 
 ### AI Pipeline
 
 1. User submits CV + JD → validated and sanitized server-side
-2. `/api/analyze` calls Claude with structured JSON schema enforcement
+2. `/api/analyze` calls Gemini with structured JSON schema enforcement
 3. `/api/rewrite` + `/api/cover-letter` run in parallel (independent of analysis)
 4. JSON responses are validated with type guards before reaching the client
 5. Failed JSON parse triggers one automatic retry with a stricter fallback prompt
@@ -69,8 +70,9 @@ src/
 
 ### Key Design Decisions
 
+- **Landing and application are separate routes** — `/` sells and never asks for a CV; `/analyze` is the tool. They shared a route until the two jobs started fighting: the page had to unmount its marketing sections when results arrived, restore scroll across the swap, and publish its state to a module-level store so the navbar could tell whether the anchors it linked to still existed. Splitting the routes deleted all three mechanisms, and made the landing page a server component again.
 - **No database** — localStorage for history, in-memory rate limiting. Zero infrastructure cost.
-- **Dual AI provider** — Anthropic Claude primary, Google Gemini fallback. Never fails silently.
+- **Swappable AI provider** — one `AiProvider` interface in `lib/ai/`, registered in `lib/ai/index.ts`. Google Gemini is the only provider today; adding a vendor touches no call site or route.
 - **Shared rate limit** — Single bucket per IP across all AI endpoints prevents self-blocking.
 - **Client-side share cards** — Canvas API generates PNG score cards without server-side image deps.
 - **Scholarship-aware prompts** — Separate prompt templates for job vs. scholarship evaluation.
@@ -97,10 +99,17 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `ANTHROPIC_API_KEY` | Yes* | Anthropic Claude API key |
-| `GEMINI_API_KEY` | No | Google Gemini API key (fallback) |
+| `GOOGLE_API_KEY` | Yes | Google AI Studio key. Create one free at [aistudio.google.com/apikey](https://aistudio.google.com/apikey). |
+| `GEMINI_API_KEY` | No | Legacy alias for `GOOGLE_API_KEY`, accepted so existing deployments keep working. |
+| `GOOGLE_MODEL` | No | Model override. Defaults to `gemini-2.5-flash`. |
+| `AI_PROVIDER` | No | Active provider. Only `google` ships today. |
+| `NEXT_PUBLIC_SITE_URL` | No | Canonical origin. Detected automatically on Vercel. |
 
-\* At least one of `ANTHROPIC_API_KEY` or `GEMINI_API_KEY` must be set.
+`GOOGLE_API_KEY` is the only variable the app needs to run. See `.env.example`.
+
+> **Note:** `ANTHROPIC_API_KEY` is **not** read by this application. If you have one
+> in `.env.local` from an earlier revision, it does nothing — the app will still
+> fail until a valid `GOOGLE_API_KEY` is set.
 
 ## Deployment
 

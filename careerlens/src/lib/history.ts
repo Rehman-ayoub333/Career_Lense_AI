@@ -26,21 +26,41 @@ function getStorage(): Storage | null {
   }
 }
 
-/** Rejects anything that would make the UI crash when rendered. */
+/**
+ * Rejects anything that would make the UI crash when rendered.
+ *
+ * The rewrite and the cover letter are deliberately *optional*. They come from
+ * two enhancement calls that run alongside the analysis and are allowed to fail
+ * on their own — `AnalysisSession` types both as `| null`, and the tabs render an
+ * empty state with a retry when they are missing.
+ *
+ * A previous version required both to be present. Because `addToHistory` reads
+ * through this filter before writing back, that did not merely hide such a
+ * session — it deleted it from storage the next time any analysis was saved. A
+ * user whose rewrite call timed out lost the analysis they had already waited
+ * and spent quota on, silently and permanently.
+ */
 function isValidSession(value: unknown): value is AnalysisSession {
   if (!value || typeof value !== 'object') return false
   const session = value as Partial<AnalysisSession>
+
+  const hasValidRewrite =
+    session.rewrite === null ||
+    (!!session.rewrite && Array.isArray(session.rewrite.rewritten_bullets))
+
+  const hasValidCoverLetter =
+    session.coverLetter === null || typeof session.coverLetter === 'string'
+
   return (
     typeof session.id === 'string' &&
     typeof session.date === 'string' &&
     (session.mode === 'job' || session.mode === 'scholarship') &&
     typeof session.jobTitle === 'string' &&
-    typeof session.coverLetter === 'string' &&
     !!session.result &&
     typeof session.result.score === 'number' &&
     typeof session.result.verdict === 'string' &&
-    !!session.rewrite &&
-    Array.isArray(session.rewrite.rewritten_bullets)
+    hasValidRewrite &&
+    hasValidCoverLetter
   )
 }
 

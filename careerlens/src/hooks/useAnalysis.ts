@@ -167,3 +167,12 @@ export function useAnalysis() {
     updateCoverLetter,
   }
 }
+
+/**
+ * The workflow handle returned by `useAnalysis`.
+ *
+ * Exported because the hook is called one level above the tool — the page needs
+ * `step` to decide whether the marketing sections should still be on screen, and
+ * two components calling the hook would give them two independent states.
+ */
+export type AnalysisController = ReturnType<typeof useAnalysis>

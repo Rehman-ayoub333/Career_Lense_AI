@@ -7,10 +7,19 @@
 
 ## Architecture rules (never break these)
 - ALL prompts live in lib/prompts.ts ONLY — never inline a prompt elsewhere
-- ALL Claude API calls go through lib/claude.ts ONLY
+- ALL AI provider calls go through lib/ai/ ONLY. The registry in lib/ai/index.ts
+  has exactly ONE provider: Google Gemini. There is no Anthropic/Claude provider
+  despite the project name — if you add one, update the privacy policy in the
+  same change, because it names the data processor.
 - ALL TypeScript types live in types/index.ts ONLY
 - ALL localStorage operations go through lib/history.ts ONLY
-- API routes live in app/api/ ONLY — never call Claude from client-side components
+- API routes live in app/api/ ONLY — never call a model from a client component
+- The landing page (`/`) and the application (`/analyze`) are SEPARATE ROUTES.
+  Never put the analysis tool, an upload zone or a CV input on `/`. The landing
+  page sells; the application works. They shared a route once and the page ended
+  up unmounting its own marketing sections, restoring scroll across the swap, and
+  publishing state to a module-level store so the navbar could discover whether
+  its anchors still existed.
 
 ## Code quality rules
 - TypeScript strict mode — zero 'any' types allowed
@@ -21,7 +30,12 @@
 
 ## Design rules
 - Colors from CSS variables only — never hardcode hex values in components
-- Spacing from Tailwind scale only — no p-5, p-7, p-9 (odd values)
+- LAYOUT spacing (margins, gaps, section and card padding) from this scale ONLY:
+  0.5 1 1.5 2 3 4 6 8 12 16 20 24
+  Note what is absent: 5, 7, 9, 10, 14. `mt-10` is NOT legal — it is the value
+  most often reached for by mistake, because it exists in stock Tailwind.
+  CONTROL padding (inside a button, badge, tag or chat bubble) may also use 2.5
+  and 3.5, inside components/ui/ and message bubbles only.
 - Animations via Framer Motion only — no CSS animation for interactive elements
 - Icons via Lucide React only — no mixing icon libraries
 - Never add a new dependency without asking first
@@ -32,4 +46,14 @@
 - If a feature isn't in SPEC.md, don't build it
 
 ## Current session task
-Project setup — Day 1-2 of the Week 1 roadmap (SPEC Section 20): folder structure, globals.css, types, prompts, Claude wrapper, .gitignore, and CLAUDE.md.
+Landing redesign, Pass 1 of 4 — route separation (`/` and `/analyze`), the
+navigation, the hero, and the design tokens the hero needs (`--text-hero`, the
+`--font-display` editorial face, the atmosphere layer).
+
+Passes 2-4 redesign the remaining sections and are NOT in scope:
+- Pass 2: Problem, How It Works, The Result
+- Pass 3: Features, Scholarship Focus, Why We're Different
+- Pass 4: Founder, Mission, Social Proof, Final CTA, Footer
+
+`DemoPreview` and `FeatureCards` on `/` are still the pre-redesign design. The
+seam below the hero is known and deliberate — do not patch it piecemeal.

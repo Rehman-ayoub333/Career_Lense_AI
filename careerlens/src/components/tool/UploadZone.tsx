@@ -1,6 +1,6 @@
 'use client'
 
-import { CheckCircle2, CloudUpload, LoaderCircle } from 'lucide-react'
+import { CheckCircle2, LoaderCircle } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 import type { UploadResponse } from '@/lib/api/contract'
@@ -92,11 +92,18 @@ export function UploadZone({ onTextExtracted }: { onTextExtracted: (text: string
         if (file) void handleFile(file)
       }}
       className={cn(
-        'flex cursor-pointer flex-col items-center justify-center rounded-[var(--radius-md)]',
-        'border-2 border-dashed px-4 py-8 text-center',
+        // A solid hairline, not a dashed one. The dashed rectangle with a cloud
+        // glyph centred inside it is the single most recognisable stock
+        // component in software, and it is the first thing that tells a visitor
+        // this page was assembled rather than designed.
+        //
+        // Contents sit flush left for the same reason: centring them inside a
+        // bordered box is the other half of that same default.
+        'flex cursor-pointer flex-col justify-center rounded-[var(--radius-md)]',
+        'border px-4 py-8',
         'transition-[background-color,border-color] duration-200 ease-out',
         isActive
-          ? 'border-violet bg-[hsl(var(--violet)/0.12)]'
+          ? 'border-border-strong bg-surface'
           : 'border-border bg-bg hover:border-border-strong hover:bg-surface'
       )}
     >
@@ -113,22 +120,33 @@ export function UploadZone({ onTextExtracted }: { onTextExtracted: (text: string
         }}
       />
 
-      {isLoading ? (
-        <LoaderCircle
-          className="mb-2 h-8 w-8 animate-spin text-violet-text"
-          strokeWidth={1.5}
-          aria-hidden="true"
-        />
-      ) : status?.tone === 'success' ? (
-        <CheckCircle2 className="mb-2 h-8 w-8 text-green-text" strokeWidth={1.5} aria-hidden="true" />
-      ) : (
-        <CloudUpload className="mb-2 h-8 w-8 text-text-muted" strokeWidth={1.5} aria-hidden="true" />
-      )}
+      <div className="flex items-center gap-3">
+        {isLoading ? (
+          <LoaderCircle
+            className="h-4 w-4 shrink-0 animate-spin text-text-muted"
+            strokeWidth={2}
+            aria-hidden="true"
+          />
+        ) : status?.tone === 'success' ? (
+          <CheckCircle2
+            className="h-4 w-4 shrink-0 text-green-text"
+            strokeWidth={2}
+            aria-hidden="true"
+          />
+        ) : null}
 
-      <div className="text-sm font-medium text-text-primary">
-        {isLoading ? 'Extracting text…' : 'Drop your CV here or click to browse'}
+        <span className="text-sm font-medium text-text-primary">
+          {isLoading ? 'Reading the document' : 'Drop a PDF here, or select one'}
+        </span>
       </div>
-      <div className="mt-1 text-xs text-text-muted">PDF or TXT · Max {MAX_MB} MB</div>
+
+      {/* The specification states every accepted format, the size ceiling, and
+          the one condition that will fail — before it fails. A scanned CV is the
+          most common failure in this product's population, and naming it in
+          advance is the whole courtesy of this component. */}
+      <div className="mt-2 font-mono text-xs leading-relaxed text-text-muted">
+        PDF or TXT · Max {MAX_MB} MB · A scanned page cannot be read; paste the text below instead
+      </div>
 
       {status ? (
         <div

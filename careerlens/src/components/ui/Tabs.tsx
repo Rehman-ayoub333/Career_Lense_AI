@@ -111,22 +111,24 @@ export function Tabs<TId extends string>({
             tabIndex={isActive ? 0 : -1}
             onClick={() => onChange(tab.id)}
             onKeyDown={(event) => handleKeyDown(event, index)}
+            // A ruled register, not a row of pills.
+            //
+            // The selected entry is *struck* — set below the surface and lit
+            // from the upper left — rather than filled with violet and given a
+            // glow. Selection is expressed the same way everywhere in this
+            // product: by depth, never by colour. A glowing capsule also reads
+            // as a button, and these navigate rather than act.
             className={cn(
-              'inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-xs font-semibold',
-              'transition-[background-color,border-color,color] duration-200 ease-out',
+              'inline-flex h-9 items-center gap-2 rounded-[var(--radius-sm)] px-3 text-xs',
+              'transition-[background-color,box-shadow,color] duration-200 ease-out',
               isActive
-                ? 'bg-violet text-white shadow-[var(--glow-violet)]'
-                : 'border border-border bg-surface text-text-secondary hover:border-border-strong hover:bg-surface-raised hover:text-text-primary'
+                ? 'bg-[hsl(var(--bg)/0.6)] font-medium text-text-primary shadow-[inset_0_2px_4px_hsl(222_60%_2%_/_0.5)]'
+                : 'text-text-secondary hover:text-text-primary'
             )}
           >
             {tab.label}
             {tab.badge ? (
-              <span
-                className={cn(
-                  'tabular rounded-full px-1.5 py-0.5 text-xs leading-none',
-                  isActive ? 'bg-white/20 text-white' : 'bg-surface-hover text-text-muted'
-                )}
-              >
+              <span className="tabular font-mono text-xs leading-none text-text-muted">
                 {tab.badge}
               </span>
             ) : null}

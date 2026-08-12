@@ -7,8 +7,10 @@
 
 ## Architecture rules (never break these)
 - ALL prompts live in lib/prompts.ts ONLY — never inline a prompt elsewhere
-- ALL AI provider calls go through lib/ai/ ONLY (was lib/claude.ts; the wrapper
-  is now provider-agnostic — Claude with a Gemini fallback — behind lib/ai/index.ts)
+- ALL AI provider calls go through lib/ai/ ONLY (was lib/claude.ts). The registry
+  in lib/ai/index.ts currently has exactly ONE provider: Google Gemini. There is
+  no Anthropic/Claude provider despite the project name — if you add one, update
+  the privacy policy in the same change, because it names the data processor.
 - ALL TypeScript types live in types/index.ts ONLY
   (API wire types live in lib/api/contract.ts — the wire format and the domain
   model are allowed to differ, but neither is ever re-declared in a component)

@@ -17,10 +17,18 @@ import type { NextConfig } from 'next'
  *
  * `connect-src 'self'` matters most here: even if a prompt injection convinced the
  * page to attempt an outbound request with the user's CV, the browser would block it.
+ *
+ * `'unsafe-eval'` is added in development only. React's development build calls
+ * `eval()` to reconstruct call stacks and drive other debugging features; without
+ * the allowance every `next dev` session logs a CSP error and those features are
+ * silently degraded. Production never needs it, so the allowance is gated on
+ * NODE_ENV rather than granted unconditionally — the shipped policy is unchanged.
  */
+const isDevelopment = process.env.NODE_ENV === 'development'
+
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ''}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",

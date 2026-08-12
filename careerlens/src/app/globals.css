@@ -88,6 +88,26 @@
   --glass-blur: 16px;
   --glass-bg: hsl(var(--bg) / 0.8);
 
+  /* ── Atmosphere ──────────────────────────────────────────────────────────
+     Light, not colour. The page previously sat on a flat `--bg` fill with one
+     violet radial wash behind the hero — which is the exact signature of a
+     generated AI landing page, and the reason the surface read as cheap.
+
+     These four layers model a room instead: a directional key light from the
+     upper left, a floor gradient that deepens toward the bottom of the
+     viewport, a vignette that holds the eye centre-frame, and film grain to
+     break up the banding that large low-alpha gradients produce on 8-bit
+     panels. Every value is deliberately below the threshold of conscious
+     notice — the effect should be impossible to point at.
+
+     Hue is near-neutral by design. Brand colour is not atmosphere; `--violet`
+     appears on the primary call to action and nowhere else on the landing. */
+  --light-key: 38 30% 70%;      /* warm, upper-left */
+  --light-fill: 217 40% 40%;    /* cool counter-light, lower-right */
+  --light-key-alpha: 0.055;
+  --light-fill-alpha: 0.04;
+  --grain-opacity: 0.028;
+
   /* ── Motion ──────────────────────────────────────────────────────────────
      One easing curve for entrances and one for exits, so unrelated components
      still feel like they belong to the same product.                         */
@@ -135,6 +155,10 @@
      no third-party request, no layout shift, and nothing for the CSP to allow. */
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
+  /* Editorial voice, used for emphasis in display copy and for long-form story
+     sections. Never for UI: labels, buttons and controls stay in `--font-sans`
+     so the interface keeps one texture and the serif keeps its meaning. */
+  --font-display: var(--font-instrument-serif), ui-serif, Georgia, serif;
 
   /* A tightened type scale. Optical sizing: larger text gets tighter leading
      and negative tracking, small text gets more of both to stay legible.
@@ -166,6 +190,19 @@
   --text-5xl--line-height: 1.03;
   --text-5xl--letter-spacing: -0.035em;
 
+  /* The landing headline, and the only type allowed above `--text-5xl` in
+     prose. Fluid rather than stepped: a fixed 3.75rem ceiling left the hero
+     visually smaller than the score gauge, so the largest thing on the site was
+     a widget rather than its argument. `clamp` lets one declaration hold from
+     320px to 1920px without a breakpoint.
+
+     The 4.5rem ceiling is measured, not chosen: 6rem was tried first and ran a
+     six-word headline to four lines, which pushed the call to action below the
+     fold at 1440x900. Display type still has to fit the viewport it ships to. */
+  --text-hero: clamp(2.5rem, 5.5vw, 4.5rem);
+  --text-hero--line-height: 1;
+  --text-hero--letter-spacing: -0.035em;
+
   /* Reserved for the score gauge numeral, which is a graphic element rather
      than text and needs a size the prose scale has no business carrying. */
   --text-display: 4.5rem;
@@ -186,20 +223,74 @@
   color-scheme: dark;
 }
 
+/*
+  The base fill lives on `html`, not `body`, so that `body` can stay transparent
+  and the fixed atmosphere layer below can paint at a negative z-index without
+  being hidden behind an opaque body background.
+*/
 html {
+  background-color: hsl(var(--bg));
   scroll-behavior: smooth;
-  /* Keeps anchor targets clear of the sticky header. */
-  scroll-padding-top: 5rem;
+  /* Keeps anchor targets clear of the sticky header, which settles at 60px. */
+  scroll-padding-top: 6rem;
   -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
-  background-color: hsl(var(--bg));
   color: hsl(var(--text-primary));
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+}
+
+/*
+  Atmosphere.
+
+  One fixed, non-interactive layer for the whole document rather than a wash per
+  section: light that restarts at every section boundary reads as decoration,
+  whereas a single continuous source reads as a room the page is sitting in.
+
+  Fixed rather than scrolling, so the key light stays a property of the viewport
+  and the page moves through it. `-z-10` keeps it above `html`'s fill and below
+  every `body` child; no element needs a stacking context of its own.
+*/
+.atmosphere {
+  background-image:
+    /* Vignette — drawn first so the two lights sit on top of it. */
+    radial-gradient(120% 80% at 50% 40%, transparent 40%, hsl(222 60% 3% / 0.5) 100%),
+    /* Cool counter-light, lower right. */
+    radial-gradient(
+      70% 55% at 88% 92%,
+      hsl(var(--light-fill) / var(--light-fill-alpha)),
+      transparent 68%
+    ),
+    /* Warm key light, upper left. */
+    radial-gradient(
+      75% 60% at 12% 4%,
+      hsl(var(--light-key) / var(--light-key-alpha)),
+      transparent 66%
+    );
+}
+
+/*
+  Film grain.
+
+  Large low-alpha gradients band visibly on 8-bit panels; a little noise breaks
+  the steps up and is the difference between "dark background" and "photograph
+  of a dark room". Generated by `feTurbulence` as an inline data URI — no
+  network request, nothing for the CSP to allow, roughly 300 bytes.
+
+  `background-repeat` tiles a 200px patch, so the cost is one small raster
+  regardless of viewport size.
+*/
+.atmosphere::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: var(--grain-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 /*

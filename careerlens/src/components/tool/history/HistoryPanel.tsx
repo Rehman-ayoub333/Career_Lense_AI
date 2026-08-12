@@ -3,35 +3,26 @@
 import { Clock, History, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 
-import { Badge, type BadgeVariant } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/Feedback'
+import { bandForScore } from '@/components/ui/Hallmark'
 import { Modal } from '@/components/ui/Modal'
+import { formatDate, MODE_LABEL } from '@/lib/format'
 import { clearHistory, deleteFromHistory, readHistory } from '@/lib/history'
-import { getScoreColorVar, getScoreTextColorVar } from '@/lib/scoring'
-import type { AnalysisSession, MatchVerdict } from '@/types'
+import type { AnalysisSession } from '@/types'
 
-const VERDICT_VARIANTS: Record<MatchVerdict, BadgeVariant> = {
-  'Strong Match': 'pass',
-  'Good Match': 'info',
-  'Partial Match': 'warn',
-  'Weak Match': 'fail',
-}
-
-const MINUTE = 60_000
-const HOUR = 3_600_000
-const DAY = 86_400_000
-
-function formatRelativeDate(iso: string): string {
-  const elapsed = Date.now() - new Date(iso).getTime()
-
-  if (elapsed < MINUTE) return 'Just now'
-  if (elapsed < HOUR) return `${Math.floor(elapsed / MINUTE)}m ago`
-  if (elapsed < DAY) return `${Math.floor(elapsed / HOUR)}h ago`
-  if (elapsed < DAY * 7) return `${Math.floor(elapsed / DAY)}d ago`
-
-  return new Date(iso).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })
-}
+/**
+ * Two things were removed from every row.
+ *
+ * **The coloured score.** Each entry carried its figure in a tinted disc, red
+ * below 41 and green above 81. A list of past applications rendered as a column
+ * of red and green is a scoreboard of a person's own rejections, and it is the
+ * last thing they need to scroll past. The figure is now struck, unpainted, and
+ * accompanied by the band as a word.
+ *
+ * **The relative date.** `3d ago` cannot be resolved to a calendar day by anyone
+ * reading it later, and a history list is read later by definition.
+ */
 
 export function HistoryPanel({ onRestore }: { onRestore: (session: AnalysisSession) => void }) {
   const [items, setItems] = useState<AnalysisSession[]>([])
@@ -99,11 +90,7 @@ export function HistoryPanel({ onRestore }: { onRestore: (session: AnalysisSessi
                 >
                   <span
                     aria-hidden="true"
-                    className="tabular flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
-                    style={{
-                      color: getScoreTextColorVar(item.result.score),
-                      backgroundColor: `color-mix(in srgb, ${getScoreColorVar(item.result.score)} 14%, transparent)`,
-                    }}
+                    className="tabular flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[hsl(var(--bg)/0.6)] text-sm font-semibold text-text-primary shadow-[inset_0_2px_4px_hsl(222_60%_2%_/_0.5)]"
                   >
                     {item.result.score}
                   </span>
@@ -112,17 +99,16 @@ export function HistoryPanel({ onRestore }: { onRestore: (session: AnalysisSessi
                     <span className="block truncate text-sm font-medium text-text-primary">
                       {item.jobTitle}
                     </span>
-                    <span className="mt-0.5 flex items-center gap-2">
-                      <Badge variant={VERDICT_VARIANTS[item.result.verdict]}>
-                        {item.result.verdict}
-                      </Badge>
-                      <span className="text-xs text-text-muted">
-                        {item.mode === 'scholarship' ? 'Scholarship' : 'Job'} ·{' '}
-                        {formatRelativeDate(item.date)}
-                      </span>
+                    <span className="mt-1 block font-mono text-xs text-text-muted">
+                      {bandForScore(item.result.score)}
+                      <span className="mx-2 text-[hsl(var(--text-muted)/0.5)]">·</span>
+                      {MODE_LABEL[item.mode]}
+                      <span className="mx-2 text-[hsl(var(--text-muted)/0.5)]">·</span>
+                      {formatDate(item.date)}
                     </span>
                     <span className="sr-only">
-                      Score {item.result.score} out of 100. Select to restore this analysis.
+                      Match {item.result.score} out of 100, band{' '}
+                      {bandForScore(item.result.score)}. Select to restore this analysis.
                     </span>
                   </span>
                 </button>
