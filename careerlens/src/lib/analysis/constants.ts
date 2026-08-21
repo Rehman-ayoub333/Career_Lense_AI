@@ -57,6 +57,37 @@ export const MATCH_VERDICTS = ['Weak Match', 'Partial Match', 'Good Match', 'Str
 
 export const ATS_STATUSES = ['pass', 'fail', 'warn'] as const
 
+/**
+ * Claim vocabularies.
+ *
+ * `CLAIM_STATUSES` is what the model may say. `VERIFICATION_TIERS` is what the
+ * deterministic check may conclude. They are separate lists on purpose and must
+ * never be merged: the model has no way to emit a verification tier, which is
+ * what makes "the model never verifies its own claim" a structural property
+ * rather than a convention.
+ */
+export const CLAIM_STATUSES = ['matched', 'partial', 'gap'] as const
+
+export const VERIFICATION_TIERS = ['verified', 'uncertain', 'unresolved'] as const
+
+/** Job mode assesses four axes. */
+export const JOB_CLAIM_CATEGORIES = ['skill', 'experience', 'education', 'ats'] as const
+
+/**
+ * Scholarship mode adds the three committee axes. These replace the removed
+ * `research_score`/`leadership_score`/`academic_score`: the same distinctions,
+ * carried by claims that cite evidence instead of by numbers that could not be
+ * checked against anything.
+ */
+export const SCHOLARSHIP_CLAIM_CATEGORIES = [
+  ...JOB_CLAIM_CATEGORIES,
+  'research',
+  'leadership',
+  'academic',
+] as const
+
+export const CLAIM_CATEGORIES = SCHOLARSHIP_CLAIM_CATEGORIES
+
 /** Expected counts, asserted after generation so a short response is caught early. */
 export const EXPECTED_COUNTS = {
   keyActions: 3,

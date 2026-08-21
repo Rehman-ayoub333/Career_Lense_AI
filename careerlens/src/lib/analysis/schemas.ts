@@ -1,6 +1,13 @@
 import type { JsonSchema } from '@/lib/ai'
 
-import { ATS_STATUSES, EXPECTED_COUNTS, MATCH_VERDICTS } from './constants'
+import {
+  ATS_STATUSES,
+  CLAIM_STATUSES,
+  EXPECTED_COUNTS,
+  JOB_CLAIM_CATEGORIES,
+  MATCH_VERDICTS,
+  SCHOLARSHIP_CLAIM_CATEGORIES,
+} from './constants'
 
 /**
  * Response schemas handed to the provider's constrained decoder.
@@ -28,6 +35,10 @@ const score = (description: string): JsonSchema => ({
   maximum: 100,
 })
 
+/**
+ * Note the absence of `source`: which mechanism decided a check is recorded
+ * server-side, not asserted by the model.
+ */
 const atsCheck: JsonSchema = {
   type: 'object',
   description: 'One ATS compatibility check.',
@@ -40,6 +51,79 @@ const atsCheck: JsonSchema = {
   required: ['id', 'label', 'status', 'note'],
 }
 
+/**
+ * One requirement claim.
+ *
+ * Four fields the final `VerifiedClaim` carries are deliberately absent here,
+ * because the model must not be able to produce any of them: `id` (assigned from
+ * the array index server-side, so it cannot collide), and `verification` /
+ * `match_score` / `hallucination_candidate` (all three computed by the
+ * deterministic Stage 2 check). The model's vocabulary is `status` —
+ * matched/partial/gap — and nothing in this schema lets it say "verified".
+ *
+ * ## `evidence_quote` and the empty-string sentinel
+ *
+ * The canonical type is `string | null`. `JsonSchema` in `lib/ai/types.ts` has no
+ * way to express a nullable field — its variants carry a single concrete `type`
+ * and no `nullable` flag — so the constrained decoder cannot be asked for `null`
+ * here without widening the provider contract and the Gemini request builder that
+ * consumes it, both of which are explicitly out of scope.
+ *
+ * The documented fallback is therefore taken: the model emits an empty string to
+ * mean "no evidence offered", and `guards.ts` coerces `""` to `null` at the
+ * validation boundary, before anything downstream sees it. Nothing past that
+ * boundary knows the sentinel exists — `grounding.ts` receives `string | null`
+ * exactly as specified, and the empty-string case never reaches it.
+ */
+const claimProperties = (categories: readonly string[]): Record<string, JsonSchema> => ({
+  requirement: {
+    type: 'string',
+    description:
+      'One specific requirement stated by the opportunity, in its own language. Under 200 characters.',
+  },
+  category: {
+    type: 'string',
+    description: 'Which axis of the opportunity this requirement belongs to.',
+    enum: categories,
+  },
+  status: {
+    type: 'string',
+    description:
+      'Your judgement of whether the CV evidences this requirement. Use "gap" when the CV does not address it at all.',
+    enum: CLAIM_STATUSES,
+  },
+  evidence_quote: {
+    type: 'string',
+    description:
+      'The span of text from the CV that supports this requirement, copied near-verbatim — never from the job description, never summarised, never invented. Use an empty string when status is "gap", or whenever you cannot quote real supporting text.',
+  },
+  rationale: {
+    type: 'string',
+    description:
+      'One sentence, under 240 characters, about what this CV does or does not state. Describe the document, never the person: write "no mention of Docker appears in the CV", never "the candidate lacks Docker".',
+  },
+})
+
+const claim = (categories: readonly string[]): JsonSchema => ({
+  type: 'object',
+  description: 'One requirement from the opportunity, judged against the CV.',
+  properties: claimProperties(categories),
+  required: ['requirement', 'category', 'status', 'evidence_quote', 'rationale'],
+})
+
+/**
+ * No `minItems`: zero claims is a defined empty state, not a failure. An
+ * opportunity description too vague to yield requirements should produce an empty
+ * array and a dedicated message, not a decoder that pads the array to satisfy a
+ * floor we imposed.
+ */
+const claims = (categories: readonly string[]): JsonSchema => ({
+  type: 'array',
+  description:
+    'Every distinct requirement the opportunity states, each judged against the CV. Extract them from the opportunity text; do not invent requirements it does not state.',
+  items: claim(categories),
+})
+
 const interviewQuestion: JsonSchema = {
   type: 'object',
   description: 'A likely interview question derived from a real gap in this CV.',
@@ -51,22 +135,21 @@ const interviewQuestion: JsonSchema = {
   required: ['question', 'skill_tested', 'tip'],
 }
 
-const ANALYSIS_PROPERTIES: Record<string, JsonSchema> = {
+/**
+ * Six sub-scores and `verdict_note` are gone from this schema, not merely unused
+ * downstream. They were generated on every call, rendered nowhere, and
+ * unverifiable by construction — a number the user cannot recount is exactly what
+ * this design removes. `coverage`, which replaces them, is not requested from the
+ * model at all: it is counted from the verified claims.
+ */
+const analysisProperties = (categories: readonly string[]): Record<string, JsonSchema> => ({
   score: score('Overall match, 0-100. Be honest; do not inflate.'),
-  skills_score: score('Skills alignment, 0-100.'),
-  experience_score: score('Experience alignment, 0-100.'),
-  education_score: score('Education alignment, 0-100.'),
   verdict: { type: 'string', description: 'Band matching the overall score.', enum: MATCH_VERDICTS },
-  verdict_note: { type: 'string', description: 'One sentence specific to this CV and this opportunity.' },
+  claims: claims(categories),
   key_actions: stringArray(
-    `Exactly ${EXPECTED_COUNTS.keyActions} actions, most impactful first. Each must be concrete and doable this week.`,
+    `Exactly ${EXPECTED_COUNTS.keyActions} actions, most impactful first, drawn preferentially from the requirements you marked "gap". Each must be concrete and doable this week. Phrase each as something to add or clarify in the CV — "add evidence of X", never "you do not have X".`,
     EXPECTED_COUNTS.keyActions
   ),
-  skills_matched: stringArray('Skills the CV genuinely evidences that the opportunity requires.'),
-  skills_missing: stringArray('Required skills with no evidence in the CV.'),
-  skills_extra: stringArray('Notable skills the CV has that the opportunity does not ask for.'),
-  keywords_present: stringArray('Exact keyword phrases from the description that appear in the CV.'),
-  keywords_missing: stringArray('High-value keyword phrases from the description absent from the CV.'),
   ats_checks: {
     type: 'array',
     description: `Exactly ${EXPECTED_COUNTS.atsChecks} checks, using the ids given in the instructions and in that order.`,
@@ -83,37 +166,28 @@ const ANALYSIS_PROPERTIES: Record<string, JsonSchema> = {
     minItems: EXPECTED_COUNTS.interviewQuestions,
     maxItems: EXPECTED_COUNTS.interviewQuestions,
   },
+})
+
+const analysisSchema = (categories: readonly string[]): JsonSchema => {
+  const properties = analysisProperties(categories)
+  return { type: 'object', properties, required: Object.keys(properties) }
 }
 
-const ANALYSIS_REQUIRED = Object.keys(ANALYSIS_PROPERTIES)
-
-export const ANALYSIS_SCHEMA: JsonSchema = {
-  type: 'object',
-  properties: ANALYSIS_PROPERTIES,
-  required: ANALYSIS_REQUIRED,
-}
+export const ANALYSIS_SCHEMA: JsonSchema = analysisSchema(JOB_CLAIM_CATEGORIES)
 
 /**
- * Scholarship mode reuses the analysis contract and adds committee-specific axes.
- * Keeping one result type means every results tab renders both modes without a
- * parallel component tree.
+ * Scholarship mode reuses the analysis contract exactly, and differs in one
+ * place: the `category` enum widens to admit the three committee axes.
+ *
+ * It previously differed by carrying three further sub-scores plus a separate
+ * tips array. Those are gone with the rest of the sub-scores — the committee axes
+ * are now assessed the same way every other axis is, as claims that cite evidence,
+ * which is both one code path instead of two and the only version of the
+ * distinction a reader can check for themselves.
  */
-const SCHOLARSHIP_PROPERTIES: Record<string, JsonSchema> = {
-  ...ANALYSIS_PROPERTIES,
-  research_score: score('Evidence of academic and research capability, 0-100.'),
-  leadership_score: score('Leadership roles and community impact, 0-100.'),
-  academic_score: score('Academic record, institution and course relevance, 0-100.'),
-  scholarship_specific_tips: stringArray(
-    'Three tips specific to this named programme, never generic scholarship advice.',
-    3
-  ),
-}
-
-export const SCHOLARSHIP_ANALYSIS_SCHEMA: JsonSchema = {
-  type: 'object',
-  properties: SCHOLARSHIP_PROPERTIES,
-  required: Object.keys(SCHOLARSHIP_PROPERTIES),
-}
+export const SCHOLARSHIP_ANALYSIS_SCHEMA: JsonSchema = analysisSchema(
+  SCHOLARSHIP_CLAIM_CATEGORIES
+)
 
 export const REWRITE_SCHEMA: JsonSchema = {
   type: 'object',

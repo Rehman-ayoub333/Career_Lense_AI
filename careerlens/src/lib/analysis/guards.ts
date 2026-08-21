@@ -1,6 +1,14 @@
-import type { AnalysisResult, ATSCheck, InterviewQuestion, RewriteResult } from '@/types'
+import type {
+  AnalysisDraft,
+  ATSCheckDraft,
+  ClaimDraft,
+  InterviewQuestion,
+  NormalizedAnalysisDraft,
+  RequirementClaim,
+  RewriteResult,
+} from '@/types'
 
-import { ATS_STATUSES, MATCH_VERDICTS } from './constants'
+import { ATS_STATUSES, CLAIM_CATEGORIES, CLAIM_STATUSES, MATCH_VERDICTS } from './constants'
 
 /**
  * Runtime shape validation for model output.
@@ -22,7 +30,8 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value)
 }
 
-function isATSCheck(value: unknown): value is ATSCheck {
+/** No `source`: which mechanism decided is recorded downstream, never claimed here. */
+function isATSCheckDraft(value: unknown): value is ATSCheckDraft {
   if (!value || typeof value !== 'object') return false
   const check = value as Record<string, unknown>
   return (
@@ -32,6 +41,40 @@ function isATSCheck(value: unknown): value is ATSCheck {
     typeof check.status === 'string' &&
     (ATS_STATUSES as readonly string[]).includes(check.status)
   )
+}
+
+/**
+ * One claim as the model emits it — no `id`, no verification fields.
+ *
+ * `evidence_quote` arrives as a plain string because the provider's schema type
+ * cannot express `null` (see `schemas.ts`); the empty string is the agreed
+ * sentinel for "no evidence offered" and is resolved to `null` by
+ * `normalizeAnalysisDraft`, one step later.
+ *
+ * The `gap` rule is enforced here rather than there: a claim that says a
+ * requirement is unaddressed while simultaneously quoting evidence for it is
+ * internally contradictory, and there is no honest way to repair it locally —
+ * dropping the quote and dropping the status are equally arbitrary. Rejecting
+ * routes it into `generateJson`'s existing single repair attempt, which is the
+ * mechanism that already exists for exactly this.
+ */
+function isClaimDraft(value: unknown): value is ClaimDraft {
+  if (!value || typeof value !== 'object') return false
+  const claim = value as Record<string, unknown>
+
+  if (
+    typeof claim.requirement !== 'string' ||
+    typeof claim.rationale !== 'string' ||
+    typeof claim.category !== 'string' ||
+    !(CLAIM_CATEGORIES as readonly string[]).includes(claim.category) ||
+    typeof claim.status !== 'string' ||
+    !(CLAIM_STATUSES as readonly string[]).includes(claim.status) ||
+    typeof claim.evidence_quote !== 'string'
+  ) {
+    return false
+  }
+
+  return claim.status !== 'gap' || claim.evidence_quote.trim().length === 0
 }
 
 function isInterviewQuestion(value: unknown): value is InterviewQuestion {
@@ -44,28 +87,32 @@ function isInterviewQuestion(value: unknown): value is InterviewQuestion {
   )
 }
 
-export function isAnalysisResult(value: unknown): value is AnalysisResult {
+/**
+ * Validates Stage 1's raw output.
+ *
+ * Note what is *not* checked, because the model never sends it: `coverage`,
+ * `verification`, `match_score`, `hallucination_candidate`, claim `id`s, or
+ * `ATSCheck.source`. A payload carrying any of those is not more trustworthy for
+ * having them — they are simply ignored, and the downstream types make it a
+ * compile error to read them off a draft.
+ */
+export function isAnalysisDraft(value: unknown): value is AnalysisDraft {
   if (!value || typeof value !== 'object') return false
   const result = value as Record<string, unknown>
 
   return (
     isFiniteNumber(result.score) &&
-    isFiniteNumber(result.skills_score) &&
-    isFiniteNumber(result.experience_score) &&
-    isFiniteNumber(result.education_score) &&
     typeof result.verdict === 'string' &&
     (MATCH_VERDICTS as readonly string[]).includes(result.verdict) &&
-    typeof result.verdict_note === 'string' &&
     isStringArray(result.key_actions) &&
     result.key_actions.length > 0 &&
-    isStringArray(result.skills_matched) &&
-    isStringArray(result.skills_missing) &&
-    isStringArray(result.skills_extra) &&
-    isStringArray(result.keywords_present) &&
-    isStringArray(result.keywords_missing) &&
+    // An empty claims array is valid: an opportunity description too vague to
+    // yield requirements is a defined empty state, not a malformed response.
+    Array.isArray(result.claims) &&
+    result.claims.every(isClaimDraft) &&
     Array.isArray(result.ats_checks) &&
     result.ats_checks.length > 0 &&
-    result.ats_checks.every(isATSCheck) &&
+    result.ats_checks.every(isATSCheckDraft) &&
     typeof result.salary_range === 'string' &&
     typeof result.salary_context === 'string' &&
     Array.isArray(result.interview_questions) &&
@@ -91,32 +138,42 @@ function clampScore(value: number): number {
 }
 
 /**
- * Brings a validated result into a state the UI can render unconditionally:
- * scores clamped to 0-100 integers, and empty strings dropped from tag lists so
- * the results tabs never paint a blank chip.
+ * Brings a validated draft into the state Stage 2 expects.
+ *
+ * Three jobs, all of them mechanical:
+ *
+ *  1. **Clamp the score** to a 0-100 integer, as before.
+ *  2. **Assign claim ids** from the array index. The model is never asked for
+ *     these — an id it chose could repeat, and this one is relied on as a React
+ *     key and as the anchor an evidence marker cites.
+ *  3. **Resolve the evidence sentinel.** `""` (or whitespace) becomes `null`,
+ *     which is the canonical "no evidence offered" value. This is the single
+ *     place the sentinel is understood: `grounding.ts` receives `string | null`
+ *     and has no knowledge that an empty string ever meant anything.
+ *
+ * Nothing here verifies anything. Deciding whether a quote is real is Stage 2's
+ * only job, and it happens after this function returns.
  */
-export function normalizeAnalysisResult(result: AnalysisResult): AnalysisResult {
+export function normalizeAnalysisDraft(draft: AnalysisDraft): NormalizedAnalysisDraft {
   const cleanList = (items: string[]): string[] =>
     items.map((item) => item.trim()).filter((item) => item.length > 0)
 
+  const claims: RequirementClaim[] = draft.claims.map((claim, index) => {
+    const quote = claim.evidence_quote?.trim() ?? ''
+    return {
+      ...claim,
+      id: `claim-${index}`,
+      requirement: claim.requirement.trim(),
+      rationale: claim.rationale.trim(),
+      evidence_quote: quote.length > 0 ? quote : null,
+    }
+  })
+
   return {
-    ...result,
-    score: clampScore(result.score),
-    skills_score: clampScore(result.skills_score),
-    experience_score: clampScore(result.experience_score),
-    education_score: clampScore(result.education_score),
-    research_score: result.research_score === undefined ? undefined : clampScore(result.research_score),
-    leadership_score: result.leadership_score === undefined ? undefined : clampScore(result.leadership_score),
-    academic_score: result.academic_score === undefined ? undefined : clampScore(result.academic_score),
-    key_actions: cleanList(result.key_actions),
-    skills_matched: cleanList(result.skills_matched),
-    skills_missing: cleanList(result.skills_missing),
-    skills_extra: cleanList(result.skills_extra),
-    keywords_present: cleanList(result.keywords_present),
-    keywords_missing: cleanList(result.keywords_missing),
-    scholarship_specific_tips: result.scholarship_specific_tips
-      ? cleanList(result.scholarship_specific_tips)
-      : undefined,
+    ...draft,
+    score: clampScore(draft.score),
+    key_actions: cleanList(draft.key_actions),
+    claims,
   }
 }
 
