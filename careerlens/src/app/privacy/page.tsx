@@ -7,9 +7,10 @@ export const metadata: Metadata = {
   title: 'Privacy Policy',
 }
 
+// `Container as="div"`: `layout.tsx` already renders the page's one `<main>`.
 export default function PrivacyPage() {
   return (
-    <Container as="main" width="prose" className="py-12">
+    <Container as="div" width="prose" className="py-12">
       <Card as="article" className="p-6 sm:p-8">
         <h1 className="text-2xl font-semibold text-text-primary">Privacy Policy</h1>
         <p className="mt-2 text-xs text-text-muted">Last updated: July 2026</p>

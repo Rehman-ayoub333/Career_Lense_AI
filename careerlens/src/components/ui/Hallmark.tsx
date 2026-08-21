@@ -72,7 +72,18 @@ export function Hallmark({ score, reference, compact = false, className }: Hallm
 
   return (
     <div className={cn('inline-block', className)}>
+      {/* One sentence, in the same phrasing `HistoryPanel` already uses for the
+          same figure. The mark's visible parts are three fragments — a numeral,
+          the word "Match", the band word — laid out for the eye and separated in
+          the accessibility tree, where they were announced as "73 Match GOOD"
+          with no stated denominator and no stated relationship between them.
+          The fragments are hidden and this replaces them. */}
+      <span className="sr-only">
+        Match {score} out of 100, band {band}.
+      </span>
+
       <motion.div
+        aria-hidden="true"
         initial={reduce ? false : { opacity: 0, y: -6 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: '-60px' }}
@@ -93,16 +104,19 @@ export function Hallmark({ score, reference, compact = false, className }: Hallm
         </span>
       </motion.div>
 
+      {/* `text-xs` (12px) in both registers: the compact variant previously set
+          this label at 11px, below the type scale's own stated floor. */}
       <div
-        className={cn(
-          'mt-3 flex items-baseline justify-between gap-4 font-mono uppercase tracking-[0.16em]',
-          compact ? 'text-[0.6875rem]' : 'text-xs'
-        )}
+        aria-hidden="true"
+        className="mt-3 flex items-baseline justify-between gap-4 font-mono text-xs uppercase tracking-[0.16em]"
       >
         <span className="text-text-muted">Match</span>
         <span className="text-text-primary">{band}</span>
       </div>
 
+      {/* The reference is real prose and stays in the accessibility tree: a band
+          without its reference asserts nothing, for a screen reader as much as
+          for a sighted reader. */}
       {compact ? null : (
         <p className="mt-3 max-w-[18rem] font-mono text-xs leading-relaxed text-[hsl(var(--text-muted)/0.75)]">
           {reference}

@@ -3,6 +3,8 @@ import { Geist, Geist_Mono, Instrument_Serif } from 'next/font/google'
 
 import { Footer } from '@/components/layout/Footer'
 import { Navbar } from '@/components/layout/Navbar'
+import { AUTHOR, SEO_KEYWORDS, SITE } from '@/config/site'
+import { getSiteUrl } from '@/lib/env'
 
 import './globals.css'
 
@@ -33,54 +35,56 @@ const instrumentSerif = Instrument_Serif({
   display: 'swap',
 })
 
-const SITE_URL = 'https://careerlens.vercel.app'
+/**
+ * The origin, resolved rather than hardcoded.
+ *
+ * `getSiteUrl()` existed in `lib/env.ts` and was dead: this file declared its own
+ * literal instead, so every preview deployment advertised the production domain
+ * as its canonical URL and pointed its OG image there too. Reading the resolver
+ * means a preview describes itself, and the production origin is configuration
+ * (`NEXT_PUBLIC_SITE_URL`) rather than a value baked into the bundle.
+ */
+const SITE_URL = getSiteUrl()
+
+/** `%s | CareerLens AI` — pages set only their own leaf title. */
+const TITLE_DEFAULT = `${SITE.name} — ${SITE.tagline}`
 
 export const metadata: Metadata = {
   title: {
-    default: 'CareerLens AI — CV Match Score & ATS Analysis',
-    template: '%s | CareerLens AI',
+    default: TITLE_DEFAULT,
+    template: `%s | ${SITE.name}`,
   },
-  description:
-    'Free AI-powered CV analyzer. Get your match score, ATS compatibility check, skill gap analysis, and rewritten CV bullets in 30 seconds. Supports job descriptions and scholarship criteria.',
-  keywords: [
-    'CV analyzer',
-    'ATS check',
-    'resume scanner',
-    'job match score',
-    'scholarship CV',
-    'DAAD application',
-    'Stipendium Hungaricum',
-    'Chevening',
-    'AI resume',
-    'career tools',
-    'skill gap analysis',
-  ],
-  authors: [{ name: 'Rehman Ayoub' }],
-  creator: 'Rehman Ayoub',
+  // Copy comes from `config/site.ts` so the footer, the share card, the export
+  // header and this metadata cannot drift apart — they previously each carried
+  // their own near-identical wording.
+  description: SITE.description,
+  keywords: [...SEO_KEYWORDS],
+  authors: [{ name: AUTHOR.name }],
+  creator: AUTHOR.name,
   metadataBase: new URL(SITE_URL),
   alternates: { canonical: '/' },
   openGraph: {
     type: 'website',
-    locale: 'en_US',
+    locale: SITE.locale,
     url: SITE_URL,
-    siteName: 'CareerLens AI',
-    title: 'CareerLens AI — CV Match Score & ATS Analysis',
-    description:
-      'Free AI-powered CV analyzer. Match score, ATS check, skill gaps, and rewritten bullets in 30 seconds.',
+    siteName: SITE.name,
+    title: TITLE_DEFAULT,
+    // The short form: OG and Twitter cards truncate, so the full sentence would
+    // be cut mid-clause by the consuming client rather than by us.
+    description: SITE.shortDescription,
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'CareerLens AI — CV Match Score & ATS Analysis',
+        alt: TITLE_DEFAULT,
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'CareerLens AI — CV Match Score & ATS Analysis',
-    description:
-      'Free AI-powered CV analyzer. Match score, ATS check, skill gaps, and rewritten bullets in 30 seconds.',
+    title: TITLE_DEFAULT,
+    description: SITE.shortDescription,
     images: ['/og-image.png'],
   },
   robots: {

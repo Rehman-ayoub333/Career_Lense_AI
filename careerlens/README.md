@@ -6,7 +6,7 @@ Free, no-signup AI-powered CV analyzer that gives you a match score, ATS compati
 
 ## Features
 
-- **Match Score** — Overall CV-to-JD compatibility score (0-100) with animated gauge
+- **Match Score** — Overall CV-to-JD compatibility score (0-100), struck as a hallmark: one strike at full value, band carried by a word and never by a colour
 - **Scholarship Mode** — Evaluate CVs against DAAD, Stipendium Hungaricum, Chevening criteria
 - **Skill Gap Analysis** — Matched, missing, and bonus skills with visual tags
 - **ATS Compatibility Check** — 8-point checklist with actionable fix suggestions
@@ -18,7 +18,7 @@ Free, no-signup AI-powered CV analyzer that gives you a match score, ATS compati
 - **Chat with CV** — Conversational AI for follow-up questions
 - **Analysis History** — Restore, delete, and review previous analyses
 - **Shareable Score Card** — Download a branded PNG score card
-- **PDF Upload** — Extract text from PDF, DOCX, or TXT files
+- **PDF Upload** — Extract text from PDF or TXT files (`UPLOAD_LIMITS.acceptedExtensions`; DOCX is not supported)
 
 ## Tech Stack
 
@@ -43,9 +43,8 @@ src/
 │   │   ├── rewrite/      # CV bullet rewrite endpoint
 │   │   ├── cover-letter/ # Cover letter generation
 │   │   ├── chat/         # Conversational CV Q&A
-│   │   ├── upload/       # PDF/DOCX text extraction
-│   │   ├── health/       # Health check
-│   │   └── share/        # Share card info
+│   │   ├── upload/       # PDF/TXT text extraction
+│   │   └── health/       # Health check
 │   ├── analyze/          # The application: upload, inputs, results
 │   └── privacy/          # Privacy policy page
 ├── components/
