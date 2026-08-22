@@ -49,18 +49,34 @@ export function Badge({ variant = 'neutral', children, className }: BadgeProps) 
 }
 
 /**
- * Keyword or skill chip.
+ * Verification-tier chip.
  *
  * Distinct from `Badge`: tags are lower-case, appear in long wrapping lists,
  * and use sentence casing because they contain proper nouns ("TypeScript",
  * "PostgreSQL") that uppercase styling would mangle.
+ *
+ * ## Why these four, and why `missing` is gone
+ *
+ * The variants used to be `match`/`missing`/`extra`, and `missing` was red. That
+ * meant a requirement the CV happened not to mention was painted in the same
+ * colour as a network failure — the system rendering an absence of evidence as
+ * if it were a fault, and by implication a fault in the person. It is the exact
+ * doctrinal violation this redesign exists to close.
+ *
+ * The vocabulary is now the verification tier itself, which describes the
+ * *evidence*: found (`verified`), found weakly (`uncertain`), not found
+ * (`unresolved`). `unresolved` uses the dedicated calm slate token, never red —
+ * see ADR-06. There is no longer a red variant here for a component to reach
+ * for, which is what makes the fix structural rather than a matter of everyone
+ * remembering.
  */
-export type TagVariant = 'match' | 'missing' | 'extra' | 'neutral'
+export type TagVariant = 'verified' | 'uncertain' | 'unresolved' | 'neutral'
 
-const TAG_VARIANTS: Record<TagVariant, string> = {
-  match: 'border-[hsl(var(--green)/0.35)] bg-[hsl(var(--green)/0.1)] text-green-text',
-  missing: 'border-[hsl(var(--red)/0.35)] bg-[hsl(var(--red)/0.1)] text-red-text',
-  extra: 'border-[hsl(var(--amber)/0.35)] bg-[hsl(var(--amber)/0.1)] text-amber-text',
+export const TAG_VARIANTS: Record<TagVariant, string> = {
+  verified: 'border-[hsl(var(--green)/0.35)] bg-[hsl(var(--green)/0.1)] text-green-text',
+  uncertain: 'border-[hsl(var(--amber)/0.35)] bg-[hsl(var(--amber)/0.1)] text-amber-text',
+  unresolved:
+    'border-[hsl(var(--unresolved)/0.4)] bg-[hsl(var(--unresolved)/0.12)] text-unresolved-text',
   neutral: 'border-border bg-surface-raised text-text-secondary',
 }
 

@@ -15,11 +15,12 @@ import { INPUT_LIMITS } from '@/lib/analysis/constants'
 import { MODE_LABEL } from '@/lib/format'
 import type { AnalysisMode } from '@/types'
 
+import { AssessmentPanel } from './AssessmentPanel'
 import { HistoryPanel } from './history/HistoryPanel'
 import { LoadingOverlay } from './LoadingOverlay'
 import { ModeSelector } from './ModeSelector'
 import { UploadZone } from './UploadZone'
-import { ScorePanel } from './results/ScorePanel/ScorePanel'
+import { EvidenceDocument } from './results/evidence/EvidenceDocument'
 import { ResultsTabs } from './results/tabs/ResultsTabs'
 
 const DEMO_CV =
@@ -48,6 +49,12 @@ export function AnalyzeTool({ analysis }: { analysis: AnalysisController }) {
   const [mode, setMode] = useState<AnalysisMode>('job')
   const [cvText, setCvText] = useState(DEMO_CV)
   const [jdText, setJdText] = useState(DEMO_JD)
+  /**
+   * The one claim currently opened, shared by the checklist and the document so
+   * selecting in either surface reveals the same claim in the other. Owned here
+   * rather than in either child, since neither is the other's parent.
+   */
+  const [activeClaimId, setActiveClaimId] = useState<string | null>(null)
 
   const canAnalyze =
     cvText.length >= INPUT_LIMITS.cv.min && jdText.length >= INPUT_LIMITS.jd.min
@@ -66,9 +73,38 @@ export function AnalyzeTool({ analysis }: { analysis: AnalysisController }) {
   if (step === 'results' && session) {
     return (
       <Container as="section" className="py-8 lg:py-12">
-        <motion.div {...SECTION_MOTION} className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-          <ScorePanel session={session} onNewAnalysis={handleReset} />
-          <ResultsTabs session={session} />
+        <motion.div {...SECTION_MOTION} className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
+          {/* Source order is the mobile order, and the mobile order is the
+              priority order: score and coverage, then the document, then the
+              tools. On `lg` the panel becomes the sticky left column. */}
+          <AssessmentPanel
+            session={session}
+            onNewAnalysis={handleReset}
+            activeClaimId={activeClaimId}
+            onClaimSelect={setActiveClaimId}
+          />
+
+          <div className="min-w-0 space-y-12">
+            <EvidenceDocument
+              cvText={session.cvText}
+              claims={session.result.claims}
+              activeClaimId={activeClaimId}
+              onClaimSelect={setActiveClaimId}
+            />
+
+            <div className="border-t border-border pt-8">
+              <h2 className="font-mono text-xs uppercase tracking-[0.16em] text-text-muted">
+                Tools
+              </h2>
+              <p className="mt-1.5 max-w-prose text-xs leading-relaxed text-[hsl(var(--text-muted)/0.8)]">
+                Text generated from your CV and this opportunity. Unlike the evidence above, none of
+                it has been checked against your document — read it before you send it.
+              </p>
+              <div className="mt-4">
+                <ResultsTabs session={session} />
+              </div>
+            </div>
+          </div>
         </motion.div>
       </Container>
     )
