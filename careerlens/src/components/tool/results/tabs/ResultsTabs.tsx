@@ -41,7 +41,12 @@ export function ResultsTabs({ session }: { session: AnalysisSession }) {
         return <SkillsTab result={session.result} mode={session.mode} />
       case 'rewrite':
         return (
-          <RewriteTab rewrite={session.rewrite} cvText={session.cvText} jdText={session.jdText} />
+          <RewriteTab
+            rewrite={session.rewrite}
+            cvText={session.cvText}
+            jdText={session.jdText}
+            claims={session.result.claims}
+          />
         )
       case 'ats':
         return <ATSTab result={session.result} />

@@ -8,6 +8,7 @@ import type {
   CoverLetterResponse,
   RewriteRequest,
 } from '@/lib/api/contract'
+import { toClaimReferences } from '@/lib/api/contract'
 import { postJson, toDisplayMessage } from '@/lib/api/client'
 import { addToHistory } from '@/lib/history'
 import type { AnalysisMode, AnalysisResult, AnalysisSession, AnalysisStep, RewriteResult } from '@/types'
@@ -114,9 +115,14 @@ export function useAnalysis() {
         // `allSettled`, not `all`: either may fail without invalidating the
         // analysis the user has already paid for in waiting time and quota.
         const [rewriteOutcome, coverLetterOutcome] = await Promise.allSettled([
-          postJson<RewriteResult>('/api/rewrite', { cvText, jdText } satisfies RewriteRequest, {
-            signal: controller.signal,
-          }),
+          postJson<RewriteResult>(
+            '/api/rewrite',
+            // The analysis has already resolved, so its claims are in hand: the
+            // rewrite can aim at the requirements the evidence check could not
+            // confirm rather than guessing which bullets are weak (ADR-18).
+            { cvText, jdText, claims: toClaimReferences(result.claims) } satisfies RewriteRequest,
+            { signal: controller.signal }
+          ),
           postJson<CoverLetterResponse>(
             '/api/cover-letter',
             { cvText, jdText } satisfies CoverLetterRequest,

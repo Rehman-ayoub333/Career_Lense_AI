@@ -1,4 +1,7 @@
+import type { ClaimReference } from './api/contract'
+import { CLAIM_CATEGORIES, VERIFICATION_TIERS } from './analysis/constants'
 import { AppError } from './errors'
+import type { ClaimCategory, VerificationTier } from '@/types'
 
 /**
  * Input sanitisation and validation for everything crossing the API boundary.
@@ -109,4 +112,53 @@ export function parseStringArray(value: unknown, maxItems = 50): string[] {
     .map((item) => item.trim())
     .filter((item) => item.length > 0)
     .slice(0, maxItems)
+}
+
+/** Longest requirement string accepted from a client, matching the schema's soft cap. */
+const MAX_REQUIREMENT_LENGTH = 200
+
+/**
+ * Coerces an unknown value into a bounded array of claim references.
+ *
+ * These arrive from the client, which received them from `/api/analyze` — but
+ * "we sent it originally" is not a reason to trust it coming back. A caller can
+ * put anything in `requirement`, and that string reaches a prompt, so it is
+ * sanitised like any other free text and the enum fields are checked against
+ * their allowed values rather than passed through.
+ *
+ * Drops malformed entries rather than rejecting the request: this field is
+ * optional and only sharpens the prompt's focus, so a bad entry costs the user a
+ * slightly less targeted rewrite, not an error page.
+ */
+export function parseClaimReferences(value: unknown, maxItems = 20): ClaimReference[] {
+  if (!Array.isArray(value)) return []
+
+  const references: ClaimReference[] = []
+
+  for (const item of value) {
+    if (references.length >= maxItems) break
+    if (!item || typeof item !== 'object') continue
+
+    const candidate = item as Record<string, unknown>
+    if (
+      typeof candidate.requirement !== 'string' ||
+      typeof candidate.category !== 'string' ||
+      !(CLAIM_CATEGORIES as readonly string[]).includes(candidate.category) ||
+      typeof candidate.verification !== 'string' ||
+      !(VERIFICATION_TIERS as readonly string[]).includes(candidate.verification)
+    ) {
+      continue
+    }
+
+    const requirement = sanitizeText(candidate.requirement, MAX_REQUIREMENT_LENGTH)
+    if (requirement.length === 0) continue
+
+    references.push({
+      requirement,
+      category: candidate.category as ClaimCategory,
+      verification: candidate.verification as VerificationTier,
+    })
+  }
+
+  return references
 }

@@ -1,4 +1,5 @@
 import { EXPECTED_COUNTS } from './analysis/constants'
+import type { ClaimReference } from './api/contract'
 
 /**
  * Every prompt in the application. Nothing else in the codebase builds prompt text.
@@ -171,8 +172,41 @@ Use exactly these ats_checks ids, in this order:
   ${SCHOLARSHIP_ATS_CHECKS}`
 }
 
-export function getRewritePrompt(cvText: string, jdText: string): string {
+/**
+ * Renders the weak-requirement block for the rewrite prompt.
+ *
+ * Wrapped in the same nonce delimiters as the CV and the description, and for
+ * the same reason: these strings arrive in a request body. That the server
+ * produced them originally, in an earlier `/api/analyze` response, is not
+ * evidence they are unmodified now — a caller can put anything in `requirement`,
+ * and it lands in a prompt. Untrusted in, delimited.
+ */
+function renderWeakRequirements(claims: readonly ClaimReference[], nonce: string): string {
+  const lines = claims
+    .map((claim) => `- ${claim.requirement} (${claim.category}, ${claim.verification})`)
+    .join('\n')
+
+  return `These are the requirements the evidence check could not confirm from this CV — either it found no supporting text, or what it found was too weak to be sure. Prioritise bullets that touch these areas, so the rewrite strengthens exactly what the candidate already saw flagged:
+
+${wrapUntrusted('WEAK_REQUIREMENTS', lines, nonce)}
+
+`
+}
+
+export function getRewritePrompt(
+  cvText: string,
+  jdText: string,
+  claims?: readonly ClaimReference[]
+): string {
   const nonce = makeNonce()
+
+  // Optional by design (ADR-18). A caller that omits it — an older client, or
+  // the retry path before an analysis exists — gets the prior generic framing
+  // and a working rewrite, just a less targeted one.
+  const focus =
+    claims && claims.length > 0
+      ? renderWeakRequirements(claims, nonce)
+      : ''
 
   return `${INJECTION_NOTICE(nonce)}
 
@@ -182,7 +216,7 @@ ${wrapUntrusted('CV', cvText, nonce)}
 
 ${wrapUntrusted('JOB_DESCRIPTION', jdText, nonce)}
 
-Rules:
+${focus}Rules:
 - Copy each original into original_bullets exactly as written, including its wording and any typos.
 - rewritten_bullets must be index-aligned: position 1 rewrites original 1.
 - Open each rewrite with a strong action verb.

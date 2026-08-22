@@ -8,18 +8,25 @@ import { SectionLabel } from '@/components/ui/Card'
 import { Alert, EmptyState } from '@/components/ui/Feedback'
 import { useClipboard } from '@/hooks/useClipboard'
 import type { RewriteRequest } from '@/lib/api/contract'
+import { toClaimReferences } from '@/lib/api/contract'
 import { postJson, toDisplayMessage } from '@/lib/api/client'
-import type { RewriteResult } from '@/types'
+import type { PublicVerifiedClaim, RewriteResult } from '@/types'
 
 export function RewriteTab({
   rewrite: initialRewrite,
   cvText,
   jdText,
+  claims,
 }: {
   /** `null` when the rewrite step failed while the analysis succeeded. */
   rewrite: RewriteResult | null
   cvText: string
   jdText: string
+  /**
+   * The analysis's claims, so a regenerate aims at the same weak requirements
+   * the original run did rather than falling back to generic framing.
+   */
+  claims: PublicVerifiedClaim[]
 }) {
   const [rewrite, setRewrite] = useState<RewriteResult | null>(initialRewrite)
   const [isRegenerating, setIsRegenerating] = useState(false)
@@ -34,6 +41,7 @@ export function RewriteTab({
       const result = await postJson<RewriteResult>('/api/rewrite', {
         cvText,
         jdText,
+        claims: toClaimReferences(claims),
       } satisfies RewriteRequest)
       setRewrite(result)
     } catch (cause) {
