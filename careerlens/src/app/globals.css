@@ -55,6 +55,27 @@
   --blue:       217 91% 60%;
   --blue-text:  213 94% 70%;
 
+  /* ── Unresolved ──────────────────────────────────────────────────────────
+     A calm slate-blue, for a requirement the evidence check could not confirm
+     from the document.
+
+     It is a new token rather than a reuse, and that is the whole point. This
+     state used to be painted red, which said "problem" about a person when the
+     only thing actually established was that a phrase could not be found in a
+     file. Red is now reserved for system errors — a network failure, a rate
+     limit — and never appears inside an analysis result. Amber was the other
+     candidate and was rejected for blurring into `uncertain`, which means
+     something genuinely different: evidence was found, but weakly.
+
+     Sits between `--border-strong` and `--text-muted` in weight, so it reads as
+     quiet information rather than a warning. A dedicated token also makes the
+     old violation hard to reintroduce by accident: there is no longer a red
+     variant for a component to reach for.
+
+     Unused until Phase 5 consumes it. #606E8A / #97A3BA. See ADR-06.          */
+  --unresolved:      220 18% 46%;
+  --unresolved-text: 220 20% 66%;
+
   /* ── Radii ─────────────────────────────────────────────────────────────── */
   --radius-sm:   6px;
   --radius-md:   10px;
@@ -150,6 +171,8 @@
   --color-red-text: hsl(var(--red-text));
   --color-blue: hsl(var(--blue));
   --color-blue-text: hsl(var(--blue-text));
+  --color-unresolved: hsl(var(--unresolved));
+  --color-unresolved-text: hsl(var(--unresolved-text));
 
   /* Fonts are supplied by `next/font` in layout.tsx, which self-hosts them —
      no third-party request, no layout shift, and nothing for the CSP to allow. */
