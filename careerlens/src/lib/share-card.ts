@@ -1,48 +1,33 @@
-import { CANVAS_TOKENS, SCORE_CANVAS_COLORS, SCORE_CANVAS_SOFT } from '@/config/design-tokens'
+import { CANVAS_TOKENS } from '@/config/design-tokens'
 import { SITE } from '@/config/site'
-import { getScoreToken } from '@/lib/scoring'
+import { bandForScore } from '@/lib/scoring'
 import type { AnalysisSession } from '@/types'
 
 /**
- * Renders a shareable score card to a canvas.
+ * Renders a shareable card to a canvas.
  *
- * Lived inside `ShareCard.tsx`, where 180 lines of drawing code surrounded a
- * 40-line dialog. Every colour was a hex literal duplicating globals.css, so the
- * card kept rendering the previous palette after the design tokens changed;
- * they now come from `CANVAS_TOKENS`, which is the one place the Canvas API's
- * inability to read CSS custom properties is paid for.
+ * This is the one artefact users actually publish, and until now it contradicted
+ * the product's own doctrine on the way out the door. It drew a ring gauge
+ * sweeping up to the score, coloured the numeral by band, and stacked three
+ * progress bars for skills, experience and education — every pattern `Hallmark`
+ * exists to have removed, rendered at 1200×630 and posted publicly.
+ *
+ * What it draws now matches the in-app mark exactly: the numeral struck once at
+ * full size in one colour whatever it says, the band as a word, the coverage
+ * count as plain text, and up to three verified requirements as uncoloured
+ * chips. The three sub-scores it used to chart no longer exist in the data model
+ * at all.
+ *
+ * Nothing here is coloured by value. A card showing 31 is drawn identically to
+ * one showing 92 — different figures, the same construction.
  */
 
 const WIDTH = 1200
 const HEIGHT = 630
 
 const FONT = 'system-ui, sans-serif'
-const CONTENT_X = 380
-const BAR_WIDTH = 700
-const BAR_HEIGHT = 8
-const BAR_RADIUS = 4
-
-interface Bar {
-  label: string
-  value: number
-  color: string
-}
-
-function barsFor(session: AnalysisSession): Bar[] {
-  const { result, mode } = session
-
-  return mode === 'scholarship'
-    ? [
-        { label: 'Research', value: result.research_score ?? 0, color: CANVAS_TOKENS.blue },
-        { label: 'Leadership', value: result.leadership_score ?? 0, color: CANVAS_TOKENS.violet },
-        { label: 'Academic', value: result.academic_score ?? 0, color: CANVAS_TOKENS.green },
-      ]
-    : [
-        { label: 'Skills', value: result.skills_score, color: CANVAS_TOKENS.blue },
-        { label: 'Experience', value: result.experience_score, color: CANVAS_TOKENS.amber },
-        { label: 'Education', value: result.education_score, color: CANVAS_TOKENS.green },
-      ]
-}
+const MARGIN = 80
+const CONTENT_WIDTH = WIDTH - MARGIN * 2
 
 function drawBackground(ctx: CanvasRenderingContext2D): void {
   ctx.fillStyle = CANVAS_TOKENS.bg
@@ -59,127 +44,112 @@ function drawBackground(ctx: CanvasRenderingContext2D): void {
   ctx.strokeRect(1, 1, WIDTH - 2, HEIGHT - 2)
 }
 
-function drawScoreDial(ctx: CanvasRenderingContext2D, session: AnalysisSession): void {
-  const { result } = session
-  const token = getScoreToken(result.score)
-  const color = SCORE_CANVAS_COLORS[token]
-
-  const cx = 200
-  const cy = 260
-  const radius = 100
-
-  ctx.beginPath()
-  ctx.arc(cx, cy, radius, 0, Math.PI * 2)
-  ctx.strokeStyle = CANVAS_TOKENS.trackFill
-  ctx.lineWidth = 16
-  ctx.stroke()
-
-  const startAngle = -Math.PI / 2
-  ctx.beginPath()
-  ctx.arc(cx, cy, radius, startAngle, startAngle + (Math.PI * 2 * result.score) / 100)
-  ctx.strokeStyle = color
-  ctx.lineWidth = 16
-  ctx.lineCap = 'round'
-  ctx.stroke()
-
-  ctx.fillStyle = color
-  ctx.font = `bold 72px ${FONT}`
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText(String(result.score), cx, cy)
-
-  // Verdict pill.
-  ctx.font = `bold 14px ${FONT}`
-  const verdict = result.verdict.toUpperCase()
-  const verdictY = cy + radius + 40
-  const pillWidth = ctx.measureText(verdict).width + 24
+/**
+ * The hallmark: a plate, the numeral, and the band word beneath it.
+ *
+ * `textPrimary` regardless of score — the band is carried by the word, exactly
+ * as it is on screen. There is no call to `getScoreToken` in this file any more,
+ * and there should not be one again.
+ */
+function drawHallmark(ctx: CanvasRenderingContext2D, score: number): void {
+  const plateX = MARGIN
+  const plateY = 150
+  const plateW = 260
+  const plateH = 200
 
   ctx.beginPath()
-  ctx.roundRect(cx - pillWidth / 2, verdictY - 14, pillWidth, 28, 14)
-  ctx.fillStyle = SCORE_CANVAS_SOFT[token]
+  ctx.roundRect(plateX, plateY, plateW, plateH, 10)
+  ctx.fillStyle = CANVAS_TOKENS.surface
   ctx.fill()
-
-  ctx.fillStyle = color
-  ctx.fillText(verdict, cx, verdictY + 1)
-}
-
-/** Draws the right-hand column and returns the y position it finished at. */
-function drawSummary(ctx: CanvasRenderingContext2D, session: AnalysisSession): number {
-  const { jobTitle, mode } = session
-  let y = 80
+  ctx.strokeStyle = CANVAS_TOKENS.border
+  ctx.lineWidth = 1
+  ctx.stroke()
 
   ctx.fillStyle = CANVAS_TOKENS.textPrimary
-  ctx.font = `bold 28px ${FONT}`
-  ctx.textAlign = 'left'
-  ctx.fillText(mode === 'scholarship' ? 'Scholarship Analysis' : 'CV Analysis', CONTENT_X, y)
+  ctx.font = `600 96px ${FONT}`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(String(score), plateX + plateW / 2, plateY + plateH / 2)
 
-  y += 40
+  ctx.font = `500 16px ${FONT}`
+  ctx.textBaseline = 'alphabetic'
   ctx.fillStyle = CANVAS_TOKENS.textMuted
-  ctx.font = `18px ${FONT}`
-  ctx.fillText(jobTitle.length > 50 ? `${jobTitle.slice(0, 47)}…` : jobTitle, CONTENT_X, y)
+  ctx.fillText('MATCH', plateX + plateW / 2 - 60, plateY + plateH + 36)
+  ctx.fillStyle = CANVAS_TOKENS.textPrimary
+  ctx.fillText(bandForScore(score), plateX + plateW / 2 + 60, plateY + plateH + 36)
+}
 
-  y += 50
-  for (const bar of barsFor(session)) {
-    ctx.fillStyle = CANVAS_TOKENS.textPrimary
-    ctx.font = `14px ${FONT}`
-    ctx.textAlign = 'left'
-    ctx.fillText(bar.label, CONTENT_X, y)
+/** Title, role, and the coverage fraction — the count, stated as a count. */
+function drawSummary(ctx: CanvasRenderingContext2D, session: AnalysisSession): number {
+  const { jobTitle, mode, result } = session
+  const x = MARGIN + 320
+  let y = 170
 
-    ctx.textAlign = 'right'
-    ctx.fillStyle = CANVAS_TOKENS.textMuted
-    ctx.fillText(`${bar.value}%`, CONTENT_X + BAR_WIDTH, y)
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'alphabetic'
 
-    y += 14
-    ctx.beginPath()
-    ctx.roundRect(CONTENT_X, y, BAR_WIDTH, BAR_HEIGHT, BAR_RADIUS)
-    ctx.fillStyle = CANVAS_TOKENS.trackFill
-    ctx.fill()
+  ctx.fillStyle = CANVAS_TOKENS.textPrimary
+  ctx.font = `600 32px ${FONT}`
+  ctx.fillText(mode === 'scholarship' ? 'Scholarship analysis' : 'CV analysis', x, y)
 
-    ctx.beginPath()
-    ctx.roundRect(
-      CONTENT_X,
-      y,
-      Math.max(BAR_RADIUS * 2, (BAR_WIDTH * bar.value) / 100),
-      BAR_HEIGHT,
-      BAR_RADIUS
-    )
-    ctx.fillStyle = bar.color
-    ctx.fill()
+  y += 44
+  ctx.fillStyle = CANVAS_TOKENS.textMuted
+  ctx.font = `20px ${FONT}`
+  ctx.fillText(jobTitle.length > 44 ? `${jobTitle.slice(0, 41)}…` : jobTitle, x, y)
 
-    y += 40
-  }
+  y += 64
+  ctx.fillStyle = CANVAS_TOKENS.textSecondary
+  ctx.font = `22px ${FONT}`
+  ctx.fillText(
+    `${result.coverage.verifiedCount} / ${result.coverage.total} requirements verified`,
+    x,
+    y
+  )
 
   return y
 }
 
-function drawMatchedSkills(
+/**
+ * Up to three verified requirements, as plain uncoloured chips.
+ *
+ * Uncoloured deliberately: a green chip would say "good", and these are simply
+ * the requirements whose supporting text was located. The card states what was
+ * found, not how well the person did.
+ */
+function drawVerifiedRequirements(
   ctx: CanvasRenderingContext2D,
   session: AnalysisSession,
   startY: number
 ): void {
-  let y = startY + 10
+  const verified = session.result.claims.filter((claim) => claim.verification === 'verified')
+  if (verified.length === 0) return
 
-  ctx.fillStyle = CANVAS_TOKENS.textPrimary
-  ctx.font = `bold 14px ${FONT}`
-  ctx.textAlign = 'left'
-  ctx.fillText('MATCHED SKILLS', CONTENT_X, y)
+  const x = MARGIN + 320
+  let y = startY + 56
 
-  y += 24
-  ctx.font = `13px ${FONT}`
-  let x = CONTENT_X
+  ctx.fillStyle = CANVAS_TOKENS.textMuted
+  ctx.font = `500 14px ${FONT}`
+  ctx.fillText('EVIDENCE FOUND FOR', x, y)
 
-  for (const skill of session.result.skills_matched.slice(0, 6)) {
-    const chipWidth = ctx.measureText(skill).width + 20
-    if (x + chipWidth > CONTENT_X + BAR_WIDTH) break
+  y += 34
+  ctx.font = `16px ${FONT}`
+
+  for (const claim of verified.slice(0, 3)) {
+    const label =
+      claim.requirement.length > 52 ? `${claim.requirement.slice(0, 49)}…` : claim.requirement
+    const chipWidth = Math.min(ctx.measureText(label).width + 28, CONTENT_WIDTH - 320)
 
     ctx.beginPath()
-    ctx.roundRect(x, y - 12, chipWidth, 26, 13)
-    ctx.fillStyle = CANVAS_TOKENS.greenSoft
+    ctx.roundRect(x, y - 20, chipWidth, 34, 17)
+    ctx.fillStyle = CANVAS_TOKENS.surfaceRaised
     ctx.fill()
+    ctx.strokeStyle = CANVAS_TOKENS.border
+    ctx.lineWidth = 1
+    ctx.stroke()
 
-    ctx.fillStyle = CANVAS_TOKENS.greenText
-    ctx.fillText(skill, x + 10, y + 2)
-    x += chipWidth + 8
+    ctx.fillStyle = CANVAS_TOKENS.textSecondary
+    ctx.fillText(label, x + 14, y + 2)
+    y += 46
   }
 }
 
@@ -192,6 +162,7 @@ function drawFooter(ctx: CanvasRenderingContext2D): void {
   ctx.fillStyle = CANVAS_TOKENS.textMuted
   ctx.font = `14px ${FONT}`
   ctx.textAlign = 'left'
+  ctx.textBaseline = 'alphabetic'
   ctx.fillText(SITE.name, 40, y + 4)
 
   ctx.textAlign = 'right'
@@ -207,8 +178,8 @@ export function drawShareCard(canvas: HTMLCanvasElement, session: AnalysisSessio
   canvas.height = HEIGHT
 
   drawBackground(ctx)
-  drawScoreDial(ctx, session)
-  drawMatchedSkills(ctx, session, drawSummary(ctx, session))
+  drawHallmark(ctx, session.result.score)
+  drawVerifiedRequirements(ctx, session, drawSummary(ctx, session))
   drawFooter(ctx)
 }
 

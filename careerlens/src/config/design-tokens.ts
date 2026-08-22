@@ -1,5 +1,3 @@
-import type { ScoreToken } from '@/lib/scoring'
-
 /**
  * Canvas-safe mirror of the design tokens.
  *
@@ -30,43 +28,21 @@ export const CANVAS_TOKENS = {
   textSecondary: hsl(214, 22, 74),
   textMuted: hsl(215, 16, 60),
 
-  violet: hsl(262, 83, 58),
-  violetSoft: hsl(262, 83, 58, 0.12),
-  green: hsl(160, 84, 39),
-  greenText: hsl(158, 72, 55),
-  greenSoft: hsl(160, 84, 39, 0.14),
-  amber: hsl(38, 92, 50),
-  red: hsl(352, 84, 60),
-  blue: hsl(217, 91, 60),
-
-  trackFill: hsl(210, 40, 97, 0.07),
-
   /** Corner-to-corner wash behind the share card. */
   violetWash: hsl(262, 83, 58, 0.06),
   blueWash: hsl(217, 91, 60, 0.04),
 } as const
 
-/** Resolves a score band token to a literal colour for canvas rendering. */
-export const SCORE_CANVAS_COLORS: Record<ScoreToken, string> = {
-  red: CANVAS_TOKENS.red,
-  amber: CANVAS_TOKENS.amber,
-  blue: CANVAS_TOKENS.blue,
-  green: CANVAS_TOKENS.green,
-}
-
-/**
- * Translucent fills matching `SCORE_CANVAS_COLORS`.
+/*
+ * Removed with the share card's ring gauge and breakdown bars: `violet`,
+ * `violetSoft`, `green`, `greenText`, `greenSoft`, `amber`, `red`, `blue`,
+ * `trackFill`, and the `SCORE_CANVAS_COLORS`/`SCORE_CANVAS_SOFT` maps that
+ * resolved a score band to one of them.
  *
- * Canvas has no colour-mix, and the previous `` `${scoreColor}20` `` trick only
- * worked while the palette was expressed as hex — appending an alpha pair to an
- * `hsl()` string produces an invalid colour that silently paints black.
+ * The card draws in surface, border and text tones only now. Nothing on it is
+ * coloured by value, so there is no band-to-colour lookup left to reach for —
+ * the same structural prevention that removed the red tag variant.
  */
-export const SCORE_CANVAS_SOFT: Record<ScoreToken, string> = {
-  red: hsl(352, 84, 60, 0.14),
-  amber: hsl(38, 92, 50, 0.14),
-  blue: hsl(217, 91, 60, 0.14),
-  green: hsl(160, 84, 39, 0.14),
-}
 
 /**
  * Motion constants mirroring the CSS custom properties.

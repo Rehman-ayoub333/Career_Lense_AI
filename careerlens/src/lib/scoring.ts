@@ -1,69 +1,46 @@
-import type { MatchVerdict } from '@/types'
-
 /**
- * Score presentation.
+ * The score bands. One table, and this is it.
  *
- * Previously `utils/score-color.ts`, which was the only file in `utils/` — an
- * arbitrary split from `lib/` that gave a reader two places to look for the same
- * kind of code. Merged into `lib/` so every non-component module has one home.
+ * There were three: `BANDS` here, `SCORE_BANDS` in `lib/analysis/constants.ts`,
+ * and `BAND_RANGES` in `components/ui/Hallmark.tsx`. All three described the same
+ * four ranges, independently, so the boundary between "Partial" and "Good" was
+ * three decisions that happened to agree. They are now one, and the other two
+ * files import from here.
+ *
+ * ## What is deliberately absent
+ *
+ * There is no longer a function mapping a score to a colour. `getScoreToken`,
+ * `getScoreColorVar` and `getScoreTextColorVar` returned `red` below 41 and
+ * `green` above 81, and they existed to paint the ring gauge and the share
+ * card's numeral — both now removed. Nothing in the product colours a figure by
+ * its value any more, and there is no helper here to make it easy to start
+ * again. The band is carried by a word, at identical weight whatever it says.
  */
 
-export type ScoreToken = 'red' | 'amber' | 'blue' | 'green'
+/** The band word. Uppercase because it is struck, not written. */
+export type Band = 'WEAK' | 'PARTIAL' | 'GOOD' | 'STRONG'
 
-interface ScoreBand {
-  /** Inclusive lower bound. */
+export interface ScoreBand {
+  band: Band
+  /** Inclusive. */
   min: number
-  token: ScoreToken
-  verdict: MatchVerdict
+  /** Inclusive. */
+  max: number
 }
 
-/** Ordered high to low so the first match wins. */
-const BANDS: readonly ScoreBand[] = [
-  { min: 81, token: 'green', verdict: 'Strong Match' },
-  { min: 66, token: 'blue', verdict: 'Good Match' },
-  { min: 41, token: 'amber', verdict: 'Partial Match' },
-  { min: 0, token: 'red', verdict: 'Weak Match' },
+/** Fixed and published, so a band is reconstructible from a score. */
+export const BANDS: readonly ScoreBand[] = [
+  { band: 'WEAK', min: 0, max: 40 },
+  { band: 'PARTIAL', min: 41, max: 65 },
+  { band: 'GOOD', min: 66, max: 80 },
+  { band: 'STRONG', min: 81, max: 100 },
 ]
 
-function bandFor(score: number): ScoreBand {
+export function bandForScore(score: number): Band {
   const clamped = Math.max(0, Math.min(100, score))
-  return BANDS.find((band) => clamped >= band.min) ?? BANDS[BANDS.length - 1]
-}
+  const match = BANDS.find((range) => clamped >= range.min && clamped <= range.max)
 
-/**
- * Returns the design-system colour *token* for a score, not a hex literal.
- *
- * The previous implementation returned hard-coded hex values (`#F43F5E`, …) that
- * duplicated globals.css and drifted from it the moment the palette changed —
- * and were invisible to the theme. Callers now resolve the token through CSS
- * custom properties, so a palette change propagates everywhere at once.
- */
-export function getScoreToken(score: number): ScoreToken {
-  return bandFor(score).token
-}
-
-/** CSS colour expression for inline styles and SVG `stroke`/`fill`. */
-export function getScoreColorVar(score: number): string {
-  return `hsl(var(--${getScoreToken(score)}))`
-}
-
-/**
- * The accessible sibling of `getScoreColorVar`, for text.
- *
- * The base tokens are fill colours — `--green` measures 2.9:1 on the raised
- * surface — so a score rendered as a numeral or a label must use the `-text`
- * variant, which clears AA on every surface in the palette.
- */
-export function getScoreTextColorVar(score: number): string {
-  return `hsl(var(--${getScoreToken(score)}-text))`
-}
-
-/**
- * The verdict a score implies.
- *
- * The model supplies its own verdict string; this is used to sanity-check that
- * the verdict and the number agree, and as a fallback for locally derived scores.
- */
-export function getScoreVerdict(score: number): MatchVerdict {
-  return bandFor(score).verdict
+  // The ranges are exhaustive over 0-100 and the score is clamped into that
+  // interval, so the fallback exists only to satisfy the type.
+  return match?.band ?? 'WEAK'
 }

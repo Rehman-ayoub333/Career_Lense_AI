@@ -5,7 +5,7 @@ import { useState } from 'react'
 
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/Feedback'
-import { bandForScore } from '@/components/ui/Hallmark'
+import { bandForScore } from '@/lib/scoring'
 import { Modal } from '@/components/ui/Modal'
 import { formatDate, MODE_LABEL } from '@/lib/format'
 import { clearHistory, deleteFromHistory, readHistory } from '@/lib/history'

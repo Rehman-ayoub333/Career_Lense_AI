@@ -1,10 +1,8 @@
 'use client'
 
-import { motion, useReducedMotion } from 'framer-motion'
 import { AlertTriangle, CheckCircle2, Info, type LucideIcon, XCircle } from 'lucide-react'
 import type { ReactNode } from 'react'
 
-import { MOTION } from '@/config/design-tokens'
 import { cn } from '@/lib/cn'
 
 /* ── Alert ──────────────────────────────────────────────────────────────────
@@ -95,85 +93,18 @@ export function EmptyState({
   )
 }
 
-/* ── Progress bar ──────────────────────────────────────────────────────────── */
-
-export function ProgressBar({
-  value,
-  colorVar,
-  label,
-  className,
-}: {
-  /** 0-100. Clamped defensively. */
-  value: number
-  /** CSS colour expression, e.g. `hsl(var(--blue))`. */
-  colorVar: string
-  /** Accessible name. Omit when an adjacent label already names the bar. */
-  label?: string
-  className?: string
-}) {
-  const clamped = Math.max(0, Math.min(100, value))
-  const reduceMotion = useReducedMotion()
-
-  return (
-    <div
-      role="progressbar"
-      aria-valuenow={clamped}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-label={label}
-      className={cn('h-2 w-full overflow-hidden rounded-full bg-[hsl(var(--border)/0.7)]', className)}
-    >
-      <motion.div
-        // `scaleX` rather than `width`: a width animation invalidates layout on
-        // every frame, a transform is composited and stays on the GPU.
-        style={{ backgroundColor: colorVar, transformOrigin: 'left center' }}
-        initial={reduceMotion ? { scaleX: clamped / 100 } : { scaleX: 0 }}
-        animate={{ scaleX: clamped / 100 }}
-        transition={
-          reduceMotion ? { duration: 0 } : { duration: 0.7, ease: MOTION.easeOut }
-        }
-        className="h-full w-full rounded-full"
-      />
-    </div>
-  )
-}
-
-/**
- * A progress bar with its label and value.
+/*
+ * `ProgressBar` and `LabelledMeter` lived here and are gone.
  *
- * The score breakdown and the landing-page demo each rendered this three-part
- * row by hand, with the label row's type and spacing declared independently in
- * both — so the marketing preview and the real product drifted apart.
+ * Both existed to draw the score breakdown — skills, experience and education as
+ * three filled bars — and the landing page's mock of it. Those three figures no
+ * longer exist in the data model, and a meter takes a `colorVar` whose only
+ * caller coloured it by the value it displayed. Nothing else ever used them.
+ *
+ * If a genuine progress indicator is needed later, it should be written for that
+ * purpose rather than recovered from here, since the API these carried was
+ * shaped around colouring a figure by how large it was.
  */
-export function LabelledMeter({
-  label,
-  value,
-  colorVar,
-  valueTestId,
-  className,
-}: {
-  label: string
-  /** 0-100. */
-  value: number
-  colorVar: string
-  /** Stable hook for end-to-end tests, applied to the numeric value. */
-  valueTestId?: string
-  className?: string
-}) {
-  return (
-    <div className={cn('space-y-2', className)}>
-      <div className="flex items-center justify-between text-xs text-text-secondary">
-        <span>{label}</span>
-        <span className="tabular" data-testid={valueTestId}>
-          {value}%
-        </span>
-      </div>
-      {/* `role="progressbar"` requires an accessible name, and the visible text
-          is a sibling rather than a label element, so it is passed explicitly. */}
-      <ProgressBar value={value} colorVar={colorVar} label={label} />
-    </div>
-  )
-}
 
 /* ── Skeleton ──────────────────────────────────────────────────────────────── */
 

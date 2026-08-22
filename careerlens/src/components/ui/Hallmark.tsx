@@ -4,6 +4,7 @@ import { motion, useReducedMotion } from 'framer-motion'
 
 import { MOTION } from '@/config/design-tokens'
 import { cn } from '@/lib/cn'
+import { bandForScore, type Band } from '@/lib/scoring'
 
 /**
  * The match score, rendered as an assay hallmark.
@@ -26,23 +27,6 @@ import { cn } from '@/lib/cn'
  *  - the construction is identical at every band. Only the figure, the word, and
  *    the depth of the strike change.
  */
-
-export type Band = 'WEAK' | 'PARTIAL' | 'GOOD' | 'STRONG'
-
-/** Fixed and published, so the band is reconstructible from the score. */
-export const BAND_RANGES: readonly { band: Band; min: number; max: number }[] = [
-  { band: 'WEAK', min: 0, max: 40 },
-  { band: 'PARTIAL', min: 41, max: 65 },
-  { band: 'GOOD', min: 66, max: 80 },
-  { band: 'STRONG', min: 81, max: 100 },
-]
-
-export function bandForScore(score: number): Band {
-  const match = BAND_RANGES.find((range) => score >= range.min && score <= range.max)
-  // The ranges are exhaustive over 0–100; the fallback exists only to satisfy
-  // the type, and a score outside that interval is a defect upstream.
-  return match?.band ?? 'WEAK'
-}
 
 /**
  * Depth of strike, one step per band.

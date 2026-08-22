@@ -46,12 +46,12 @@ export const AI_TIMEOUT_MS = {
   chat: 20_000,
 } as const
 
-export const SCORE_BANDS = [
-  { min: 0, max: 40, verdict: 'Weak Match', token: 'red' },
-  { min: 41, max: 65, verdict: 'Partial Match', token: 'amber' },
-  { min: 66, max: 80, verdict: 'Good Match', token: 'blue' },
-  { min: 81, max: 100, verdict: 'Strong Match', token: 'green' },
-] as const
+/*
+ * `SCORE_BANDS` lived here and is gone. It was the second of three independent
+ * copies of the same four ranges; `lib/scoring.ts` now owns the single table.
+ * It also carried a `token` field mapping low scores to red, which nothing
+ * should ever have consumed.
+ */
 
 export const MATCH_VERDICTS = ['Weak Match', 'Partial Match', 'Good Match', 'Strong Match'] as const
 
