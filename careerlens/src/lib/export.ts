@@ -1,5 +1,6 @@
 import { SITE } from '@/config/site'
-import type { AnalysisSession } from '@/types'
+import { formatDate } from '@/lib/format'
+import type { AnalysisSession, PublicVerifiedClaim, VerificationTier } from '@/types'
 
 /**
  * Plain-text export of a finished analysis.
@@ -20,32 +21,86 @@ function numbered(items: readonly string[]): string[] {
   return items.map((item, index) => `  ${index + 1}. ${item}`)
 }
 
+/** Group headings, in the same fixed order and the same fixed words as the UI. */
+const TIER_HEADING: Record<VerificationTier, string> = {
+  verified: 'EVIDENCE FOUND',
+  uncertain: 'EVIDENCE UNCLEAR',
+  unresolved: 'NOT FOUND IN YOUR CV',
+}
+
+const TIER_ORDER: readonly VerificationTier[] = ['verified', 'uncertain', 'unresolved']
+
+/**
+ * One claim: the requirement, then the CV text it was matched against.
+ *
+ * The quote is indented under its requirement rather than run together with it,
+ * because the whole point of the export is that a reader can check the finding
+ * against their own document without the app in front of them.
+ */
+function claimLines(claim: PublicVerifiedClaim): string[] {
+  const lines = [`  • ${claim.requirement}`, `      ${claim.rationale}`]
+
+  if (claim.evidence_quote !== null) {
+    lines.push(`      Cited: "${claim.evidence_quote}"`)
+  }
+
+  return lines
+}
+
+/**
+ * The requirements, grouped by what the evidence check found.
+ *
+ * This replaces the old flat Matched/Missing/Bonus block, and the difference is
+ * not cosmetic: that block asserted three lists of skills as facts about the
+ * candidate, with no way to tell where any of it came from. This states what was
+ * looked for, what was found, and — for the unresolved group — says in the
+ * heading itself that the subject is the document.
+ */
+function claimSections(claims: readonly PublicVerifiedClaim[]): string[] {
+  if (claims.length === 0) {
+    return section('REQUIREMENTS', [
+      '  No specific requirements could be read from the description provided.',
+    ])
+  }
+
+  return TIER_ORDER.flatMap((tier) => {
+    const group = claims.filter((claim) => claim.verification === tier)
+    if (group.length === 0) return []
+    return section(`${TIER_HEADING[tier]} (${group.length})`, group.flatMap(claimLines))
+  })
+}
+
 export function buildReport(session: AnalysisSession): string {
-  const { result, mode, rewrite, jobTitle, coverLetter } = session
+  const { result, mode, rewrite, jobTitle, coverLetter, date } = session
+  const { coverage } = result
 
   const lines: string[] = [
-    `${SITE.name.toUpperCase()} — OPTIMIZED CV EXPORT`,
+    `${SITE.name.toUpperCase()} — CV ANALYSIS`,
     RULE,
     '',
     `Role: ${jobTitle}`,
     `Mode: ${mode === 'scholarship' ? 'Scholarship' : 'Job Description'}`,
     `Match Score: ${result.score}/100 — ${result.verdict}`,
-    `Generated: ${new Date().toLocaleDateString('en-GB', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    })}`,
+    `Evidence: ${coverage.verifiedCount} of ${coverage.total} requirements verified`,
+    // `session.date`, not `new Date()`: this reports when the analysis ran, not
+    // when the file happened to be downloaded. Routed through `formatDate` like
+    // every other exported artefact, closing the one call site that formatted
+    // dates independently.
+    `Analysed: ${formatDate(date)}`,
     '',
+    ...claimSections(result.claims),
+    ...section('KEY ACTIONS', numbered(result.key_actions)),
+    ...section(
+      'ATS CHECKS',
+      result.ats_checks.map(
+        (check) => `  [${check.status.toUpperCase().padEnd(4)}] ${check.label} — ${check.note}`
+      )
+    ),
+    ...section('SALARY', [`  ${result.salary_range}`, `  ${result.salary_context}`]),
     ...section(
       'REWRITTEN CV BULLETS',
       rewrite ? numbered(rewrite.rewritten_bullets) : ['  (Not generated for this analysis.)']
     ),
-    ...section('KEY ACTIONS', numbered(result.key_actions)),
-    ...section('SKILLS ANALYSIS', [
-      `  Matched: ${result.skills_matched.join(', ') || 'None detected'}`,
-      `  Missing: ${result.skills_missing.join(', ') || 'None'}`,
-      ...(result.skills_extra.length > 0 ? [`  Bonus:   ${result.skills_extra.join(', ')}`] : []),
-    ]),
     ...section('COVER LETTER', [coverLetter ?? '  (Not generated for this analysis.)']),
     RULE,
     '',
