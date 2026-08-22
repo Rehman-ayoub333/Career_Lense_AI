@@ -1,25 +1,28 @@
 import {
-  isAnalysisResult,
+  isAnalysisDraft,
   isRewriteResult,
-  normalizeAnalysisResult,
+  normalizeAnalysisDraft,
   normalizeRewriteResult,
 } from '@/lib/analysis/guards'
-import type { AnalysisResult } from '@/types'
+import type { AnalysisDraft, ClaimDraft } from '@/types'
 
-function validResult(overrides: Partial<AnalysisResult> = {}): AnalysisResult {
+function claimDraft(overrides: Partial<ClaimDraft> = {}): ClaimDraft {
+  return {
+    requirement: '3+ years of production React experience',
+    category: 'skill',
+    status: 'matched',
+    evidence_quote: '4 years building React applications',
+    rationale: 'The CV states four years of React work.',
+    ...overrides,
+  }
+}
+
+function validDraft(overrides: Partial<AnalysisDraft> = {}): AnalysisDraft {
   return {
     score: 72,
-    skills_score: 78,
-    experience_score: 64,
-    education_score: 82,
     verdict: 'Good Match',
-    verdict_note: 'Solid overlap with a gap in infrastructure work.',
+    claims: [claimDraft()],
     key_actions: ['Add Kubernetes', 'Quantify impact', 'Reorder sections'],
-    skills_matched: ['TypeScript'],
-    skills_missing: ['Kubernetes'],
-    skills_extra: ['SQL'],
-    keywords_present: ['React'],
-    keywords_missing: ['CI/CD'],
     ats_checks: [{ id: 'headings', label: 'Standard headings', status: 'pass', note: 'Clear.' }],
     salary_range: '$90,000 - $120,000',
     salary_context: 'Reflects mid-level frontend work in a major metro.',
@@ -28,64 +31,199 @@ function validResult(overrides: Partial<AnalysisResult> = {}): AnalysisResult {
   }
 }
 
-describe('isAnalysisResult', () => {
-  it('accepts a complete result', () => {
-    expect(isAnalysisResult(validResult())).toBe(true)
+describe('isAnalysisDraft', () => {
+  it('accepts a complete draft', () => {
+    expect(isAnalysisDraft(validDraft())).toBe(true)
   })
 
   it.each([[null], [undefined], ['{}'], [42], [[]]])('rejects %p', (value) => {
-    expect(isAnalysisResult(value)).toBe(false)
+    expect(isAnalysisDraft(value)).toBe(false)
   })
 
   it('rejects a verdict outside the allowed set', () => {
-    expect(isAnalysisResult(validResult({ verdict: 'Excellent Match' as never }))).toBe(false)
+    expect(isAnalysisDraft(validDraft({ verdict: 'Excellent Match' as never }))).toBe(false)
   })
 
   it('rejects an ATS check with an unknown status', () => {
-    const broken = validResult({
+    const broken = validDraft({
       ats_checks: [{ id: 'headings', label: 'Headings', status: 'maybe' as never, note: 'x' }],
     })
-    expect(isAnalysisResult(broken)).toBe(false)
+    expect(isAnalysisDraft(broken)).toBe(false)
   })
 
   it('rejects a score that is not a finite number', () => {
-    expect(isAnalysisResult(validResult({ score: Number.NaN }))).toBe(false)
-    expect(isAnalysisResult(validResult({ score: '72' as never }))).toBe(false)
+    expect(isAnalysisDraft(validDraft({ score: Number.NaN }))).toBe(false)
+    expect(isAnalysisDraft(validDraft({ score: '72' as never }))).toBe(false)
   })
 
   it('rejects empty required collections that would render as blank panels', () => {
-    expect(isAnalysisResult(validResult({ ats_checks: [] }))).toBe(false)
-    expect(isAnalysisResult(validResult({ interview_questions: [] }))).toBe(false)
-    expect(isAnalysisResult(validResult({ key_actions: [] }))).toBe(false)
+    expect(isAnalysisDraft(validDraft({ ats_checks: [] }))).toBe(false)
+    expect(isAnalysisDraft(validDraft({ interview_questions: [] }))).toBe(false)
+    expect(isAnalysisDraft(validDraft({ key_actions: [] }))).toBe(false)
+  })
+
+  it('accepts an empty claims array — zero requirements is a defined empty state, not a malformed response', () => {
+    // An opportunity description too vague to yield requirements produces this.
+    // FAILURE_MODES_FINAL.md is explicit that it is not an error.
+    expect(isAnalysisDraft(validDraft({ claims: [] }))).toBe(true)
   })
 })
 
-describe('normalizeAnalysisResult', () => {
+describe('isAnalysisDraft — claim validation', () => {
+  it('rejects a claim with a category outside the allowed set', () => {
+    expect(
+      isAnalysisDraft(validDraft({ claims: [claimDraft({ category: 'vibes' as never })] }))
+    ).toBe(false)
+  })
+
+  it('rejects a claim with a status outside the model vocabulary', () => {
+    // "verified" is the mechanical verdict, not something the model may assert.
+    // The schema has no field it could put it in, and this is the second lock.
+    expect(
+      isAnalysisDraft(validDraft({ claims: [claimDraft({ status: 'verified' as never })] }))
+    ).toBe(false)
+  })
+
+  it('rejects a claim whose evidence_quote is null rather than the empty-string sentinel', () => {
+    // Stage 1 speaks in the sentinel (ADR-10); null only exists after
+    // normalization. A null here means the response did not come from the schema.
+    expect(
+      isAnalysisDraft(validDraft({ claims: [claimDraft({ evidence_quote: null as never })] }))
+    ).toBe(false)
+  })
+
+  it.each([['requirement'], ['rationale'], ['category'], ['status'], ['evidence_quote']])(
+    'rejects a claim missing %s',
+    (field) => {
+      const incomplete = { ...claimDraft() } as Record<string, unknown>
+      delete incomplete[field]
+      expect(isAnalysisDraft(validDraft({ claims: [incomplete as never] }))).toBe(false)
+    }
+  )
+
+  it('rejects the whole draft when any one claim is malformed', () => {
+    const draft = validDraft({
+      claims: [claimDraft(), claimDraft({ category: 'nonsense' as never }), claimDraft()],
+    })
+    expect(isAnalysisDraft(draft)).toBe(false)
+  })
+})
+
+describe('isAnalysisDraft — the gap-with-non-null-quote rejection rule', () => {
+  // A claim saying a requirement is unaddressed while quoting evidence for it is
+  // internally contradictory. Dropping the quote and dropping the status are
+  // equally arbitrary repairs, so it is rejected and routed into generateJson's
+  // existing single repair attempt (AI_PIPELINE_FINAL.md §Schema validation).
+
+  it('rejects a gap claim that carries an evidence quote', () => {
+    const draft = validDraft({
+      claims: [claimDraft({ status: 'gap', evidence_quote: 'built three React applications' })],
+    })
+    expect(isAnalysisDraft(draft)).toBe(false)
+  })
+
+  it('accepts a gap claim with the empty-string sentinel', () => {
+    expect(
+      isAnalysisDraft(validDraft({ claims: [claimDraft({ status: 'gap', evidence_quote: '' })] }))
+    ).toBe(true)
+  })
+
+  it('accepts a gap claim whose quote is whitespace only, since that carries no evidence either', () => {
+    expect(
+      isAnalysisDraft(
+        validDraft({ claims: [claimDraft({ status: 'gap', evidence_quote: '   \n ' })] })
+      )
+    ).toBe(true)
+  })
+
+  it('does not apply the rule to matched or partial claims', () => {
+    // Only `gap` asserts the absence of evidence, so only `gap` contradicts a quote.
+    for (const status of ['matched', 'partial'] as const) {
+      expect(isAnalysisDraft(validDraft({ claims: [claimDraft({ status })] }))).toBe(true)
+      expect(
+        isAnalysisDraft(validDraft({ claims: [claimDraft({ status, evidence_quote: '' })] }))
+      ).toBe(true)
+    }
+  })
+})
+
+describe('normalizeAnalysisDraft', () => {
   it('clamps out-of-range scores to 0-100 integers', () => {
-    const result = normalizeAnalysisResult(validResult({ score: 142, skills_score: -8 }))
-    expect(result.score).toBe(100)
-    expect(result.skills_score).toBe(0)
+    expect(normalizeAnalysisDraft(validDraft({ score: 142 })).score).toBe(100)
+    expect(normalizeAnalysisDraft(validDraft({ score: -8 })).score).toBe(0)
   })
 
   it('rounds fractional scores', () => {
-    expect(normalizeAnalysisResult(validResult({ score: 71.6 })).score).toBe(72)
+    expect(normalizeAnalysisDraft(validDraft({ score: 71.6 })).score).toBe(72)
   })
 
-  it('drops blank entries that would render as empty chips', () => {
-    const result = normalizeAnalysisResult(validResult({ skills_matched: ['React', '', '   ', 'SQL'] }))
-    expect(result.skills_matched).toEqual(['React', 'SQL'])
+  it('drops blank key actions that would render as empty rows', () => {
+    const result = normalizeAnalysisDraft(
+      validDraft({ key_actions: ['Add Kubernetes', '', '   ', 'Quantify impact'] })
+    )
+    expect(result.key_actions).toEqual(['Add Kubernetes', 'Quantify impact'])
   })
 
-  it('leaves scholarship-only fields undefined in job mode', () => {
-    const result = normalizeAnalysisResult(validResult())
-    expect(result.research_score).toBeUndefined()
-    expect(result.scholarship_specific_tips).toBeUndefined()
+  it('assigns claim ids from the array index, never from the model', () => {
+    const result = normalizeAnalysisDraft(
+      validDraft({ claims: [claimDraft(), claimDraft(), claimDraft()] })
+    )
+    // Stable, unique, and usable as both a React key and a citation anchor.
+    expect(result.claims.map((claim) => claim.id)).toEqual(['claim-0', 'claim-1', 'claim-2'])
   })
 
-  it('clamps scholarship scores when present', () => {
-    const result = normalizeAnalysisResult(validResult({ research_score: 120, leadership_score: -5 }))
-    expect(result.research_score).toBe(100)
-    expect(result.leadership_score).toBe(0)
+  it('resolves the empty-string evidence sentinel to null (ADR-10)', () => {
+    const result = normalizeAnalysisDraft(
+      validDraft({
+        claims: [
+          claimDraft({ status: 'gap', evidence_quote: '' }),
+          claimDraft({ status: 'gap', evidence_quote: '  \t ' }),
+          claimDraft({ evidence_quote: 'four years of React' }),
+        ],
+      })
+    )
+
+    // Nothing downstream ever sees the sentinel — grounding.ts is specified to
+    // receive `string | null` and this is the one place that is made true.
+    expect(result.claims[0].evidence_quote).toBeNull()
+    expect(result.claims[1].evidence_quote).toBeNull()
+    expect(result.claims[2].evidence_quote).toBe('four years of React')
+  })
+
+  it('trims the quote, requirement and rationale', () => {
+    const result = normalizeAnalysisDraft(
+      validDraft({
+        claims: [
+          claimDraft({
+            requirement: '  React experience  ',
+            rationale: '  The CV says so.  ',
+            evidence_quote: '  four years of React  ',
+          }),
+        ],
+      })
+    )
+
+    expect(result.claims[0].requirement).toBe('React experience')
+    expect(result.claims[0].rationale).toBe('The CV says so.')
+    expect(result.claims[0].evidence_quote).toBe('four years of React')
+  })
+
+  it('adds no verification fields — that is Stage 2 alone', () => {
+    const [claim] = normalizeAnalysisDraft(validDraft()).claims
+    const keys = Object.keys(claim).sort()
+
+    expect(keys).toEqual([
+      'category',
+      'evidence_quote',
+      'id',
+      'rationale',
+      'requirement',
+      'status',
+    ])
+  })
+
+  it('handles an empty claims array without inventing one', () => {
+    expect(normalizeAnalysisDraft(validDraft({ claims: [] })).claims).toEqual([])
   })
 })
 
