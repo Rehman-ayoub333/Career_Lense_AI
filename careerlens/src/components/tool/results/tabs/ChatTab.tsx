@@ -24,6 +24,25 @@ const GREETING: ChatMessage = {
   status: 'ok',
 }
 
+/**
+ * The requirements the model found no evidence for, as plain strings.
+ *
+ * `result.skills_missing` used to supply this. It no longer exists, and the
+ * chat wire shape is specified as unchanged, so the same list is derived from
+ * the claims that replaced it (ADR-13). `status: 'gap'` is the model's own
+ * judgment, which is the right source here — this is context for a conversation
+ * about what to work on, not a verification result.
+ *
+ * The richer version, where chat can also see verification tiers and explain
+ * why something reads as unresolved, is a documented SHOULD-HAVE and stays
+ * deferred rather than pulled forward for convenience.
+ */
+function gapRequirements(session: AnalysisSession): string[] {
+  return session.result.claims
+    .filter((claim) => claim.status === 'gap')
+    .map((claim) => claim.requirement)
+}
+
 function AssistantAvatar() {
   return (
     <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--violet)/0.12)]">
@@ -57,7 +76,7 @@ export function ChatTab({ session }: { session: AnalysisSession }) {
         jdText: session.jdText,
         score: session.result.score,
         verdict: session.result.verdict,
-        missingSkills: session.result.skills_missing,
+        missingSkills: gapRequirements(session),
       } satisfies ChatRequest)
 
       setMessages((current) => [...current, { role: 'assistant', content: reply, status: 'ok' }])

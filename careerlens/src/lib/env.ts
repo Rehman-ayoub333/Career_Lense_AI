@@ -60,6 +60,23 @@ export function getSiteUrl(): string {
   return 'http://localhost:3000'
 }
 
+/**
+ * Whether this server is permitted to answer in research mode at all.
+ *
+ * Research mode returns per-claim internals (`match_score`,
+ * `hallucination_candidate`) that the product deliberately never shows a user.
+ * The request header alone is not authorization — anyone can send a header — so
+ * the server must also be configured to allow it. Both are required, which is
+ * why this is a getter and not an inference from the header.
+ *
+ * Accepts `true` or `1`, since the planning documents use both spellings.
+ */
+export function isResearchModeEnabled(): boolean {
+  assertServerOnly()
+  const value = read('RESEARCH_MODE_ENABLED')?.toLowerCase()
+  return value === 'true' || value === '1'
+}
+
 export function isProduction(): boolean {
   return process.env.NODE_ENV === 'production'
 }

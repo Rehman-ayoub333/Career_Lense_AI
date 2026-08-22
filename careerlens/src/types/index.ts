@@ -164,6 +164,19 @@ export interface AnalysisResult {
   ats_checks: ATSCheck[]
 }
 
+/**
+ * What research mode returns: the same result, with the internal per-claim
+ * fields left in.
+ *
+ * Not a second pipeline — the same one, serialized differently. `match_score`
+ * and `hallucination_candidate` are computed on every request regardless; this
+ * shape is the only one that includes them, and reaching it requires both the
+ * `X-Research-Mode` header and the server-side flag.
+ */
+export interface ResearchAnalysisResult extends Omit<AnalysisResult, 'claims'> {
+  claims: VerifiedClaim[]
+}
+
 /* ── Stage 1 output ───────────────────────────────────────────────────────── */
 
 /**
