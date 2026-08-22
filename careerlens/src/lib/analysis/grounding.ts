@@ -158,25 +158,43 @@ function overlapRatio(
   return matched / quoteLength
 }
 
+/** A pure-digit token, in the Unicode sense that survives normalization. */
+const DIGIT_TOKEN = /^\p{Nd}+$/u
+
+interface BestMatch {
+  score: number
+  /** The tokens of the window that produced `score`. Empty when nothing was searched. */
+  window: readonly string[]
+  quoteTokens: readonly string[]
+}
+
 /**
- * The best overlap the quote achieves anywhere in the source.
+ * Scans the source for the window that best matches the quote.
  *
  * Returns `null` when the quote carries no matchable content at all — empty,
  * whitespace, or punctuation that normalizes away to nothing — which is a
  * different thing from "searched and found nothing" and is kept distinguishable
  * for the caller.
  *
- * Multiple strong matches do not improve or dilute the result. Ambiguity about
+ * Multiple strong matches do not improve or dilute the score. Ambiguity about
  * *where* in a document a phrase appears says nothing about *whether* it appears,
- * which is the only question being asked.
+ * which is the only question the score answers.
+ *
+ * The winning window is returned alongside the score because the numeric gate
+ * below needs to inspect it. Selection is the plain argmax this loop always
+ * performed — strict `>` means the first window to reach the maximum keeps it,
+ * in this loop's own iteration order (width `n-1`, `n`, `n+1` outermost, source
+ * position within each). The loop is deliberately not restructured; ADR-17 is
+ * explicit that the gate is applied once, after the existing scan has already
+ * picked its winner.
  */
-export function bestMatchScore(quote: string, sourceText: string): number | null {
+function findBestMatch(quote: string, sourceText: string): BestMatch | null {
   const quoteTokens = tokenize(normalizeForMatching(quote))
   const quoteLength = quoteTokens.length
   if (quoteLength === 0) return null
 
   const sourceTokens = tokenize(normalizeForMatching(sourceText))
-  if (sourceTokens.length === 0) return 0
+  if (sourceTokens.length === 0) return { score: 0, window: [], quoteTokens }
 
   const quoteCounts = countTokens(quoteTokens)
   const widths =
@@ -185,6 +203,7 @@ export function bestMatchScore(quote: string, sourceText: string): number | null
       : [quoteLength]
 
   let best = 0
+  let bestWindow: readonly string[] = []
 
   for (const width of widths) {
     // `max(1, …)` so a source shorter than the window is still compared once, as
@@ -192,14 +211,67 @@ export function bestMatchScore(quote: string, sourceText: string): number | null
     const positions = Math.max(1, sourceTokens.length - width + 1)
 
     for (let start = 0; start < positions; start += 1) {
-      const score = overlapRatio(sourceTokens.slice(start, start + width), quoteCounts, quoteLength)
-      // Nothing can beat a complete match; stop rather than scan the rest.
-      if (score >= 1) return 1
-      if (score > best) best = score
+      const window = sourceTokens.slice(start, start + width)
+      const score = overlapRatio(window, quoteCounts, quoteLength)
+
+      // Nothing can beat a complete match; stop rather than scan the rest. A
+      // complete match also cannot fail the digit gate — every quote token
+      // occurrence, digits included, was accounted for in this window.
+      if (score >= 1) return { score: 1, window, quoteTokens }
+      if (score > best) {
+        best = score
+        bestWindow = window
+      }
     }
   }
 
-  return best
+  return { score: best, window: bestWindow, quoteTokens }
+}
+
+/**
+ * The best overlap the quote achieves anywhere in the source.
+ *
+ * Reports the overlap ratio and nothing else. The numeric gate deliberately does
+ * not apply here: ADR-17 leaves `match_score` untouched, because that number is
+ * what Experiment 1 reports and what a later error-analysis pass needs in order
+ * to tell "the gate caught a real fabrication" apart from "the gate is
+ * miscalibrated". Zeroing it would erase genuine overlap that did exist.
+ */
+export function bestMatchScore(quote: string, sourceText: string): number | null {
+  return findBestMatch(quote, sourceText)?.score ?? null
+}
+
+/**
+ * The numeric-token integrity gate (ADR-17).
+ *
+ * Every pure-digit token in the quote must appear as an exact token in the
+ * winning window. Membership, not multiplicity — the question is whether the
+ * number is there at all.
+ *
+ * This exists because token overlap dilutes: "led a team of 12 engineers" against
+ * a CV saying 4 is caught at six tokens (0.83) and missed at fourteen (0.93),
+ * since one wrong token weighs less the more true ones surround it. That gets
+ * worse as quotes get longer, which is backwards — and a fabricated team size,
+ * percentage or date is the single highest-value thing to get wrong on a CV.
+ *
+ * Scoped to digits alone because digits survive normalization intact. The
+ * analogous check for proper nouns would need the capitalization that
+ * lowercasing has already thrown away, which is a change to the normalization
+ * pipeline rather than a check bolted after it.
+ *
+ * Known residual gap, logged rather than quietly solved: a spelled-out number in
+ * the CV ("four engineers") against a digit in the quote ("4 engineers") is not
+ * caught, because token equality here is exact and number-word normalization was
+ * never in scope. Revisit only if Phase 8/9 data shows it matters.
+ */
+function hasIntactDigitTokens(quoteTokens: readonly string[], window: readonly string[]): boolean {
+  const present = new Set(window)
+
+  for (const token of quoteTokens) {
+    if (DIGIT_TOKEN.test(token) && !present.has(token)) return false
+  }
+
+  return true
 }
 
 export function tierForScore(score: number): VerificationTier {
@@ -247,13 +319,21 @@ export function verifyClaims(
       }
     }
 
-    const score = bestMatchScore(quote, sourceText)
+    const match = findBestMatch(quote, sourceText)
 
     // A quote made only of punctuation or symbols: non-null, so the model did
     // assert something, but it normalizes to nothing searchable. Scored 0 rather
     // than `null`, since `null` is reserved for "no quote was offered".
-    const matchScore = score ?? 0
-    const verification = tierForScore(matchScore)
+    const matchScore = match?.score ?? 0
+
+    // Tier from the overlap ratio, then capped by the digit gate. The cap goes
+    // straight to `unresolved` rather than stopping at `uncertain`: a fabricated
+    // number is the canonical case the hallucination-rate metric exists to
+    // catch, and `hallucination_candidate` is only ever paired with
+    // `unresolved`, so capping one tier short would quietly exclude this exact
+    // case from the measurement it is supposed to feed (ADR-17).
+    const gated = match !== null && !hasIntactDigitTokens(match.quoteTokens, match.window)
+    const verification = gated ? 'unresolved' : tierForScore(matchScore)
 
     return {
       ...claim,

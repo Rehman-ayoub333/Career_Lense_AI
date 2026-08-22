@@ -107,12 +107,14 @@ describe('verifyClaims — ordinary cases', () => {
     expect(result.verification).toBe('verified')
   })
 
-  it('scores an exact quote containing repeated tokens 1.0, not 0.8 — the intersection counts multiplicity', () => {
+  it('scores an exact quote containing repeated tokens 1.0, not 0.8 — the intersection counts multiplicity (ADR-16)', () => {
     // "Managed a team of 4 and a budget of 200k" is 10 tokens with only 8 distinct
     // ones ("a" and "of" each appear twice). Counted as a literal set intersection
     // the numerator would collapse those duplicates while the denominator kept
     // counting them, capping a verbatim quote at 0.8 and reporting it uncertain.
-    // See the note on `overlapRatio` in grounding.ts.
+    //
+    // ADR-16 records the multiset reading and this test pins it, so the
+    // behaviour cannot drift back to literal set semantics unnoticed.
     const result = verifyOne('Managed a team of 4 and a budget of 200k')
 
     expect(result.match_score).toBe(1)
@@ -159,31 +161,64 @@ describe('verifyClaims — ordinary cases', () => {
 })
 
 describe('verifyClaims — adversarial cases', () => {
-  it('ADVERSARIAL: a fabricated quote that alters a number ("4 engineers" -> "12 engineers") scores below the verified threshold', () => {
+  it('ADVERSARIAL: a fabricated quote that alters a number ("4 engineers" -> "12 engineers") is capped at unresolved by the digit gate (ADR-17)', () => {
     // The exact case the hallucination-rate metric exists to catch. Five of the
-    // quote's six tokens are present; the fabricated one is not.
+    // quote's six tokens are present; the fabricated "12" is not, and the gate
+    // caps the tier regardless of the 0.83 overlap that would otherwise have
+    // read as uncertain.
     const result = verifyOne('Led a team of 12 engineers')
 
+    expect(result.verification).toBe('unresolved')
+    expect(result.hallucination_candidate).toBe(true)
+    // The score is left alone — the gate overrides the tier, not the measurement.
     expect(result.match_score).toBeLessThan(VERIFICATION_THRESHOLDS.verified)
-    expect(result.verification).not.toBe('verified')
-    expect(result.hallucination_candidate).toBe(false)
+    expect(result.match_score).toBeGreaterThan(0.8)
   })
 
-  it('ADVERSARIAL — KNOWN LIMITATION: the same fabricated number inside a longer quote does reach verified', () => {
+  it('ADVERSARIAL: the same fabricated number diluted across a longer quote is still caught by the digit gate (ADR-17)', () => {
     // 13 of 14 tokens are genuinely present, so the single fabricated token is
-    // diluted to 0.93 and clears the 0.85 threshold. Token overlap cannot see
-    // that the one token it missed is the only one carrying the claim's meaning.
+    // diluted to 0.93 and clears the 0.85 threshold on overlap alone. Before the
+    // gate this returned `verified` — the "spec-defining bug" TESTING_STRATEGY_
+    // FINAL.md names, and worse for longer quotes, which is backwards.
     //
-    // Asserted rather than hidden: this is a real limit of the specified
-    // algorithm at the specified threshold, and it is the kind of finding
-    // OPEN_QUESTIONS_FINAL.md's fuzzy-match entry says to surface after the
-    // adversarial suite runs — not a passing test dressed up as a clean result.
+    // The gate does not care how much true text surrounds the false number.
     const result = verifyOne(
       'Led a team of 12 engineers through a full migration from REST to GraphQL'
     )
 
-    expect(result.verification).toBe('verified')
+    expect(result.verification).toBe('unresolved')
+    expect(result.hallucination_candidate).toBe(true)
+    // match_score keeps the real overlap rather than being zeroed, so a later
+    // error analysis can tell a caught fabrication from a miscalibrated gate.
     expect(result.match_score).toBeGreaterThan(0.9)
+    expect(result.match_score).toBeLessThan(1)
+  })
+
+  it('REGRESSION: the digit gate does not touch a quote whose numbers are correct', () => {
+    // Same shape as the fabrication above, with the real number. The gate must
+    // cost true positives nothing.
+    const short = verifyOne('Led a team of 4 engineers')
+    expect(short.verification).toBe('verified')
+    expect(short.match_score).toBe(1)
+    expect(short.hallucination_candidate).toBe(false)
+
+    const long = verifyOne('Led a team of 4 engineers through a full migration from REST to GraphQL')
+    expect(long.verification).toBe('verified')
+    expect(long.match_score).toBe(1)
+
+    // And a paraphrase carrying a correct number still degrades to uncertain on
+    // overlap alone, rather than being gated to unresolved.
+    const paraphrase = verifyOne('Delivered three production React applications across 4 years')
+    expect(paraphrase.verification).toBe('uncertain')
+  })
+
+  it('REGRESSION: a multi-digit figure inside a longer token is not gated, since only pure-digit tokens are checked', () => {
+    // "200k" is digits plus a letter, so it is not a pure-digit token and the
+    // gate leaves it alone — the quote is verbatim and stays verified.
+    const result = verifyOne('Managed a team of 4 and a budget of 200k')
+
+    expect(result.verification).toBe('verified')
+    expect(result.match_score).toBe(1)
   })
 
   it('ADVERSARIAL: text quoted from the job description is unresolved, because only the CV is ever searched', () => {
