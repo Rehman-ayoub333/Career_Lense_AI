@@ -96,6 +96,29 @@ const SCHOLARSHIP_ATS_CHECKS = [
   'fit — clear fit with the programme',
 ].join('\n  ')
 
+/**
+ * The evidence rules, shared verbatim by both analysis prompts.
+ *
+ * These are the instructions the whole product rests on, so they are written
+ * once and used by both modes rather than paraphrased into each — a rule that
+ * exists in two slightly different wordings is a rule that will drift.
+ *
+ * The first one is the most important instruction in this file. A `rationale`
+ * that says "the candidate has never used Docker" states a fact about a person
+ * that the model has no way to know; "no mention of Docker appears in the CV"
+ * states a fact about a document, which is the only thing it was given. The
+ * distinction is enforced at three independent layers — the data model has no
+ * field that could hold the first kind of claim, this prompt forbids it, and the
+ * UI copy is fixed — precisely so no single missed review lets it through.
+ */
+const EVIDENCE_RULES = `Rules you must not break:
+- Every rationale describes THE DOCUMENT, never the person. Write "no mention of Docker appears in the CV", never "the candidate has never used Docker" or "they lack this skill". Absence of a mention is not proof a skill is absent from this person's life — only from this document. Do not treat those two things as equivalent in your own reasoning.
+- Never invent an evidence_quote. If you are unsure whether some text really supports a requirement, use status "partial" and quote the closest text that does exist, or status "gap".
+- When status is "gap", evidence_quote must be an empty string. Never pair a gap with a quote.
+- evidence_quote must be copied from the CV, never from the opportunity description.
+- evidence_quote must be a near-verbatim span of the CV. Light paraphrase for grammar is tolerable; summarising a whole paragraph into a sentence is not.
+- Quote the strongest evidence you can find. Where the CV contradicts itself about a requirement, quote the strongest available text and use status "partial" rather than resolving the contradiction yourself.`
+
 export function getJobAnalysisPrompt(cvText: string, jdText: string): string {
   const nonce = makeNonce()
 
@@ -108,12 +131,15 @@ ${wrapUntrusted('CV', cvText, nonce)}
 ${wrapUntrusted('JOB_DESCRIPTION', jdText, nonce)}
 
 How to assess:
+- Extract every distinct requirement the job description actually states, and judge each one against the CV as a separate claim. Do not invent requirements the description does not state.
+- For each requirement, decide: does the CV provide evidence? Quote the exact CV text that shows it, or say there is none. Never guess evidence you cannot quote.
+- Categorise each claim as skill, experience, education or ats.
 - Score honestly. A candidate missing the core requirement scores below 50 no matter how strong they are elsewhere.
-- "Matched" skills need actual evidence in the CV, not a plausible inference.
-- Keywords must be phrases that literally appear in the job description.
-- The ${EXPECTED_COUNTS.keyActions} key actions must be things this person can do this week, ordered by impact.
+- The ${EXPECTED_COUNTS.keyActions} key actions must come preferentially from the requirements you marked "gap", ordered by impact, and each must be something this person can do this week. Phrase each as something to add or clarify in the CV — "add evidence of X" — never "you do not have X".
 - Salary range should reflect the seniority and location implied by the description; give a range with a currency.
 - Interview questions must probe the specific gaps you identified, not generic behavioural prompts.
+
+${EVIDENCE_RULES}
 
 Use exactly these ats_checks ids, in this order:
   ${JOB_ATS_CHECKS}`
@@ -131,13 +157,15 @@ ${wrapUntrusted('CV', cvText, nonce)}
 ${wrapUntrusted('SCHOLARSHIP_CRITERIA', scholarshipText, nonce)}
 
 How to assess:
-- Judge research potential, leadership, academic record, community impact and programme fit.
-- Set skills_matched to the specific strengths this application demonstrates, and skills_missing to the gaps that would weaken it in committee.
-- Set skills_extra to an empty array; it does not apply to scholarships.
-- Set education_score to the same value as academic_score.
+- Extract every distinct criterion the programme actually states, and judge each one against the CV as a separate claim. Do not invent criteria the programme does not state.
+- For each criterion, decide: does the CV provide evidence? Quote the exact CV text that shows it, or say there is none. Never guess evidence you cannot quote.
+- Judge research potential, leadership, academic record, community impact and programme fit. Use the research, leadership and academic categories for those axes, and skill, experience, education or ats for the rest.
+- Score honestly. A candidate missing a stated core criterion scores below 50 no matter how strong they are elsewhere.
+- The ${EXPECTED_COUNTS.keyActions} key actions must come preferentially from the criteria you marked "gap", and must name this programme's stated priorities rather than generic scholarship advice. Phrase each as something to add or clarify in the CV.
 - Set salary_range to "N/A — scholarship application" and salary_context to one sentence explaining that salary is not applicable.
-- scholarship_specific_tips must name this programme and its stated priorities, never generic scholarship advice.
 - Interview questions should be what this panel would actually ask this candidate.
+
+${EVIDENCE_RULES}
 
 Use exactly these ats_checks ids, in this order:
   ${SCHOLARSHIP_ATS_CHECKS}`
