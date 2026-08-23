@@ -1,5 +1,6 @@
 import { generateJson } from '@/lib/ai'
 import { aggregateCoverage } from '@/lib/analysis/aggregate'
+import { attributeAtsChecks } from '@/lib/analysis/ats-checks'
 import { AI_TIMEOUT_MS, INPUT_LIMITS } from '@/lib/analysis/constants'
 import { verifyClaims } from '@/lib/analysis/grounding'
 import { isAnalysisDraft, normalizeAnalysisDraft } from '@/lib/analysis/guards'
@@ -18,8 +19,6 @@ import { isAnalysisMode, parseObjectBody, parseTextField } from '@/lib/validator
 import type {
   AnalysisDraft,
   AnalysisResult,
-  ATSCheck,
-  ATSCheckDraft,
   PublicVerifiedClaim,
   ResearchAnalysisResult,
   VerifiedClaim,
@@ -66,18 +65,6 @@ function toPublicClaims(claims: readonly VerifiedClaim[]): PublicVerifiedClaim[]
     rationale: claim.rationale,
     verification: claim.verification,
   }))
-}
-
-/**
- * Records which mechanism decided each ATS check.
- *
- * Every check is the model's answer today, so every check says so. The three
- * mechanically-decidable ids (`dates`, `contact`, `tables`) become
- * `deterministic` when that logic arrives in Phase 5 — until then, claiming it
- * here would be the exact thing this field exists to prevent.
- */
-function attributeAtsChecks(checks: readonly ATSCheckDraft[]): ATSCheck[] {
-  return checks.map((check) => ({ ...check, source: 'model' }))
 }
 
 export const POST = createApiRoute<AnalysisResult | ResearchAnalysisResult>({
@@ -143,6 +130,12 @@ export const POST = createApiRoute<AnalysisResult | ResearchAnalysisResult>({
     // 4. Aggregate. Counted from the tiers above, never asked of the model.
     const coverage = aggregateCoverage(claims)
 
+    //    The three mechanically-decidable ATS ids are re-checked against the CV
+    //    and override the model where the check is conclusive; the other five,
+    //    and any inconclusive check, keep the model's answer and say so in
+    //    `source` (ADR-20). Deterministic and in-process, like Stages 2 and 3.
+    const atsChecks = attributeAtsChecks(normalized.ats_checks, cvText)
+
     // 5. Respond.
     const common = {
       score: normalized.score,
@@ -152,7 +145,7 @@ export const POST = createApiRoute<AnalysisResult | ResearchAnalysisResult>({
       salary_range: normalized.salary_range,
       salary_context: normalized.salary_context,
       interview_questions: normalized.interview_questions,
-      ats_checks: attributeAtsChecks(normalized.ats_checks),
+      ats_checks: atsChecks,
     }
 
     return researchMode ? { ...common, claims } : { ...common, claims: toPublicClaims(claims) }
