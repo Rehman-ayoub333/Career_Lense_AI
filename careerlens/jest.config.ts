@@ -1,21 +1,22 @@
 import type { Config } from 'jest'
 
 /**
- * Unit tests for the pure logic layer.
+ * Unit, integration and component tests.
  *
- * Scope is deliberate: sanitisation, JSON recovery, rate limiting, scoring,
- * validation guards and history persistence. These are the modules where a
- * regression is silent — a broken sanitiser or a mis-parsed model response
- * produces plausible-looking output rather than a crash — which makes them
- * exactly the code worth pinning down.
+ * The default environment stays `node`, which is right for the pure logic layer
+ * and for the API-route tests. Component tests opt into a DOM per file with a
+ * `@jest-environment jsdom` docblock rather than the whole suite paying for one
+ * — the logic tests are the majority and none of them touch a DOM.
  *
- * Components and routes are covered by type checking and the production build;
- * adding a DOM test runner would mean new dependencies for a thinner return.
+ * End-to-end tests are Playwright's and live in `e2e/`, ignored here: they drive
+ * a real browser against a running server, which is a different thing from a
+ * test runner and should not be started by `npm test`.
  */
 const config: Config = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   roots: ['<rootDir>/tests'],
+  testPathIgnorePatterns: ['<rootDir>/e2e/', '<rootDir>/node_modules/'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
