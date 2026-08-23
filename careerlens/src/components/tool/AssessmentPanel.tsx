@@ -8,6 +8,8 @@ import { buildReport, downloadTextFile, reportFilename } from '@/lib/export'
 import { analysisReference } from '@/lib/format'
 import type { AnalysisSession } from '@/types'
 
+import { ATSChecklist } from './results/evidence/ATSChecklist'
+import { CompensationSummary } from './results/evidence/CompensationSummary'
 import { CoverageSummary } from './results/evidence/CoverageSummary'
 import { RequirementChecklist } from './results/evidence/RequirementChecklist'
 import { Summary } from './results/ScorePanel/KeyActions'
@@ -60,6 +62,31 @@ export function AssessmentPanel({
             claims={result.claims}
             activeClaimId={activeClaimId}
             onClaimSelect={onClaimSelect}
+          />
+        </div>
+      </div>
+
+      {/* Formatting and compensation sit below the requirements and above the
+          actions (ADR-19). Both are assessment output rather than generated
+          content, so they belong beside the coverage stats — not as a fifth
+          entry in a Tools strip that is deliberately four tools wide. */}
+      <div className="mt-12 border-t border-border pt-6">
+        <h2 className="font-mono text-xs uppercase tracking-[0.16em] text-text-muted">
+          Formatting
+        </h2>
+        <div className="mt-4">
+          <ATSChecklist checks={result.ats_checks} />
+        </div>
+      </div>
+
+      <div className="mt-12 border-t border-border pt-6">
+        <h2 className="font-mono text-xs uppercase tracking-[0.16em] text-text-muted">
+          Compensation
+        </h2>
+        <div className="mt-4">
+          <CompensationSummary
+            salary_range={result.salary_range}
+            salary_context={result.salary_context}
           />
         </div>
       </div>
