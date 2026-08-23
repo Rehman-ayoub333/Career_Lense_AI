@@ -1,0 +1,14 @@
+{
+  "dataset_version": "v1-scaffold",
+  "item_count": 5,
+  "construction_date": "2026-08-23",
+  "labeler_ids": [
+    "L1"
+  ],
+  "split": {
+    "calibration": [],
+    "test": []
+  },
+  "items_sha256": "12ff667e769f6f77170f759980bd796443d0fbb3b7c70fee0a6efd331e3981b7",
+  "notes": "SCAFFOLD ONLY — NOT A RESEARCH DATASET. These 5 items exist to make the schema unambiguous and to exercise the harness. They are far below the 60-150 target in RESEARCH_DATASET_SPEC.md, have had no second-labeler pass, and have no computed kappa. No result computed from them is a finding. The split is deliberately empty: assigning one before the real dataset exists would create a calibration/test boundary that means nothing, and the leakage rule requires the split be fixed before calibration begins on the real set."
+}

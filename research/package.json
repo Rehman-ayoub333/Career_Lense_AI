@@ -1,0 +1,16 @@
+{
+  "name": "careerlens-research",
+  "private": true,
+  "type": "module",
+  "description": "Evaluation harness for the CareerLens evidence-grounding thesis. Declares ESM only — no dependencies, by design: Node 24 strips TypeScript natively and every script here runs with the standard library alone.",
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "scripts": {
+    "test": "node --test scripts/**/*.test.ts",
+    "typecheck": "../careerlens/node_modules/.bin/tsc -p tsconfig.json",
+    "evaluate": "node scripts/evaluate.ts",
+    "perturb": "node scripts/perturb.ts",
+    "ablate": "node scripts/ablate.ts"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "//": [
+    "Typecheck-only. research/ has no build step and no package.json — Node 24",
+    "strips types natively, so the scripts run as-is with zero dependencies.",
+    "",
+    "@types/node is borrowed from careerlens/node_modules rather than installed",
+    "here, which keeps research/ dependency-free. It is a dev-time convenience",
+    "for `tsc --noEmit`; nothing at runtime reads this file.",
+    "",
+    "Run: npx --prefix ../careerlens tsc -p tsconfig.json"
+  ],
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "strict": true,
+    "noEmit": true,
+    "noUncheckedIndexedAccess": false,
+    "allowImportingTsExtensions": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["node"],
+    "typeRoots": ["../careerlens/node_modules/@types"],
+    "paths": {
+      "@/*": ["../careerlens/src/*"]
+    }
+  },
+  "include": ["scripts/**/*.ts"]
+}
