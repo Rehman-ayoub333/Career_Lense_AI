@@ -6,6 +6,8 @@ import { describe, it } from 'node:test'
 import { keywordBaselineStatus, keywordOverlap, tokenize } from '../baselines/keyword-overlap.ts'
 import {
   cosineSimilarity,
+  embeddingBaselineStatus,
+  embeddingSimilarities,
   EmbeddingBaselineNotConfiguredError,
   getEmbeddingBaseline,
 } from '../baselines/embedding-similarity.ts'
@@ -319,17 +321,107 @@ describe('keyword-overlap baseline', () => {
 })
 
 describe('embedding baseline', () => {
+  /**
+   * The credential is read from the ambient environment, so these tests set it
+   * explicitly and restore it. Asserting against whatever happens to be in the
+   * developer's shell would make the suite pass or fail for reasons unrelated to
+   * the code — and this suite has to stay green both before and after
+   * `GOOGLE_API_KEY` is populated.
+   */
+  function withEnv<T>(overrides: Record<string, string | undefined>, run: () => T): T {
+    const saved = new Map<string, string | undefined>()
+    for (const key of Object.keys(overrides)) saved.set(key, process.env[key])
+
+    try {
+      for (const [key, value] of Object.entries(overrides)) {
+        if (value === undefined) delete process.env[key]
+        else process.env[key] = value
+      }
+      return run()
+    } finally {
+      for (const [key, value] of saved) {
+        if (value === undefined) delete process.env[key]
+        else process.env[key] = value
+      }
+    }
+  }
+
   it('refuses rather than silently degrading to something weaker', () => {
     // A baseline that quietly returns a plausible number is worse than an absent
-    // one, because the comparison still gets published.
-    assert.throws(() => getEmbeddingBaseline(), EmbeddingBaselineNotConfiguredError)
+    // one, because the comparison still gets published. Experiment 1 reports
+    // without it (ADR-21).
+    withEnv({ GOOGLE_API_KEY: undefined, GEMINI_API_KEY: undefined }, () => {
+      assert.throws(() => getEmbeddingBaseline(), EmbeddingBaselineNotConfiguredError)
+    })
   })
 
-  it('has a correct cosine implementation ready for whichever source is chosen', () => {
+  it('treats a whitespace-only key as absent, not as a credential', () => {
+    withEnv({ GOOGLE_API_KEY: '   ', GEMINI_API_KEY: undefined }, () => {
+      assert.throws(() => getEmbeddingBaseline(), EmbeddingBaselineNotConfiguredError)
+    })
+  })
+
+  it('builds against Gemini once a credential exists, defaulting the model', () => {
+    withEnv({ GOOGLE_API_KEY: 'test-key', GOOGLE_EMBEDDING_MODEL: undefined }, () => {
+      assert.equal(getEmbeddingBaseline().model, 'text-embedding-004')
+    })
+  })
+
+  it('lets GOOGLE_EMBEDDING_MODEL roll the model forward without a code change', () => {
+    // The model string lands in every run's config.json, so it has to be the
+    // one actually used, not a hard-coded default that silently diverges.
+    withEnv({ GOOGLE_API_KEY: 'test-key', GOOGLE_EMBEDDING_MODEL: 'gemini-embedding-001' }, () => {
+      assert.equal(getEmbeddingBaseline().model, 'gemini-embedding-001')
+    })
+  })
+
+  it('has a correct cosine implementation', () => {
     assert.equal(cosineSimilarity([1, 0], [1, 0]), 1)
     assert.equal(cosineSimilarity([1, 0], [0, 1]), 0)
     assert.equal(cosineSimilarity([0, 0], [1, 1]), 0)
     assert.throws(() => cosineSimilarity([1], [1, 2]), /lengths differ/)
+  })
+
+  it('embeds the CV once for all requirements, not once per pair', async () => {
+    // One call per pair would multiply the quota cost by the requirement count
+    // for an identical result, so the batching is worth pinning down.
+    const calls: string[][] = []
+    const stub = {
+      model: 'stub',
+      async embed(texts: readonly string[]): Promise<number[][]> {
+        calls.push([...texts])
+        return texts.map((_, index) => (index === 0 ? [1, 0] : [1, 0]))
+      },
+    }
+
+    const scores = await embeddingSimilarities(['React', 'GraphQL'], 'cv text', stub)
+
+    assert.equal(calls.length, 1)
+    assert.deepEqual(calls[0], ['cv text', 'React', 'GraphQL'])
+    assert.deepEqual(scores, [1, 1])
+  })
+
+  it('returns no scores for no requirements, without calling the endpoint', async () => {
+    let called = false
+    const stub = {
+      model: 'stub',
+      async embed(): Promise<number[][]> {
+        called = true
+        return []
+      },
+    }
+
+    assert.deepEqual(await embeddingSimilarities([], 'cv text', stub), [])
+    assert.equal(called, false)
+  })
+
+  it('thresholds similarity into the same matched/gap vocabulary as the keyword baseline', () => {
+    // 0.6 is a starting value, not a calibrated one — same status as the
+    // verifier's 0.85/0.55.
+    assert.equal(embeddingBaselineStatus(0.7), 'matched')
+    assert.equal(embeddingBaselineStatus(0.6), 'matched')
+    assert.equal(embeddingBaselineStatus(0.59), 'gap')
+    assert.equal(embeddingBaselineStatus(0.5, 0.4), 'matched')
   })
 })
 

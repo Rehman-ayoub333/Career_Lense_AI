@@ -8,11 +8,11 @@ The evaluation harness for CareerLens's evidence-grounding contribution. Sibling
 
 | | State | Blocked on |
 |---|---|---|
-| Harness code | Written, typechecked, 39 unit tests passing | — |
+| Harness code | Written, typechecked, 45 unit tests passing | — |
 | Scaffold dataset (5 items) | Exists, validates | — |
 | Real dataset (60–150 items) | **Not started** | Human labelling work |
 | Experiment 1 / 2 / 3 runs | **Never run** | `GOOGLE_API_KEY`, then the dataset |
-| Embedding baseline | **Not implemented** | An ADR on the embedding source |
+| Embedding baseline | Implemented (ADR-21), never run | `GOOGLE_API_KEY` |
 
 ## Requirements
 
@@ -39,6 +39,17 @@ node --test scripts/lib/lib.test.ts              # unit tests, no server needed
 ```
 
 `CAREERLENS_URL` overrides the default `http://localhost:3000`.
+
+### The embedding baseline's own environment
+
+Every other script reaches the model through the running app. The embedding baseline (ADR-21) is the one exception: it calls Gemini's `batchEmbedContents` directly, in-process, so it reads `GOOGLE_API_KEY` from *this* shell, not from `careerlens/.env.local`. Node does not load `.env` files on its own, so export it:
+
+```bash
+export GOOGLE_API_KEY=...              # or GEMINI_API_KEY
+export GOOGLE_EMBEDDING_MODEL=...      # optional, defaults to text-embedding-004
+```
+
+Unset, the baseline throws and the run reports it as absent rather than substituting a weaker number. `GOOGLE_EMBEDDING_MODEL` is deliberately not in `careerlens/.env.example`: the application never reads it, and listing it there would imply otherwise.
 
 ## What each script produces
 
@@ -87,7 +98,7 @@ research/
 ├── annotation/          GUIDELINES.md, raw/ for the two-labeller pass
 ├── scripts/
 │   ├── lib/             dataset, metrics, alignment, perturbation, run scaffolding
-│   ├── baselines/       keyword-overlap (done), embedding-similarity (not implemented)
+│   ├── baselines/       keyword-overlap, embedding-similarity (Gemini, ADR-21)
 │   ├── evaluate.ts      Experiment 1
 │   ├── perturb.ts       Experiment 2
 │   └── ablate.ts        Experiment 3
@@ -102,7 +113,7 @@ research/
 - **The dataset is five items.** It is labelled `SCAFFOLD ONLY` in its own manifest. It is below the 60–150 target, has had no second-labeller pass, and has no computed κ. Nothing computed from it is a finding.
 - **The split is empty on purpose.** Assigning a calibration/test boundary before the real dataset exists would make a meaningless one, and the leakage rule requires the split be fixed *before* calibration begins.
 - **The 0.85/0.55 thresholds are uncalibrated.** They are the specified starting values. Calibrating them is what the calibration split is for, and it has not happened.
-- **The embedding baseline throws.** It is secondary; Experiment 1 runs and reports without it. A baseline that silently degrades to something weaker is worse than an absent one, because the comparison still gets published.
+- **The embedding baseline has never been run.** It is implemented against Gemini's embedding endpoint per ADR-21, and its pure logic is unit-tested, but no vector has ever been fetched. Without `GOOGLE_API_KEY` it throws rather than returning a plausible number: it is secondary, Experiment 1 reports without it, and a baseline that silently degrades to something weaker is worse than an absent one, because the comparison still gets published.
 
 ## Boundary
 

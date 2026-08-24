@@ -18,6 +18,9 @@ Per `RESEARCH_DATASET_SPEC.md`: all `cv_text` in the research dataset is synthet
 ## Research-mode gating
 `X-Research-Mode: 1` header only activates extended (internal-field-including) response shaping when `RESEARCH_MODE_ENABLED` is also true server-side (`API_CONTRACT_FINAL.md`). A header-only trigger with no server-side flag would let any client request internal fields (`match_score`, raw Stage-1 output) simply by adding a header — this two-factor gate is a deliberate defense-in-depth choice, not redundant caution, and must ship as two independent checks (header present AND env flag true), not one check implying the other.
 
+## Research-mode embedding baseline — data flow
+Per ADR-21, `research/scripts/baselines/embedding-similarity.ts` calls Gemini's embedding endpoint using the same `GOOGLE_API_KEY` already configured for the generation pipeline. This introduces no new disclosure category: the same synthetic dataset text already travels to the same vendor over the same credential for the generation calls the experiments make anyway, and the research dataset is synthetic by construction (§Research dataset privacy above), so no real applicant's CV is involved at any point. It runs only from `research/`, never from the deployed application.
+
 ## Environment / secrets
 Unchanged: `GOOGLE_API_KEY` read server-side only (`lib/env.ts`), never exposed to the client bundle, never logged. `.env.local` remains gitignored (verify this is still true at Phase A, since it's a one-line regression risk with severe consequences if ever reverted). No new secret-bearing configuration is introduced by this plan.
 
