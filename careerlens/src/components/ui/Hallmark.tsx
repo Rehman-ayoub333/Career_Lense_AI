@@ -102,7 +102,7 @@ export function Hallmark({ score, reference, compact = false, className }: Hallm
           without its reference asserts nothing, for a screen reader as much as
           for a sighted reader. */}
       {compact ? null : (
-        <p className="mt-3 max-w-[18rem] font-mono text-xs leading-relaxed text-[hsl(var(--text-muted)/0.75)]">
+        <p className="mt-3 max-w-[18rem] font-mono text-xs leading-relaxed text-text-faint">
           {reference}
         </p>
       )}

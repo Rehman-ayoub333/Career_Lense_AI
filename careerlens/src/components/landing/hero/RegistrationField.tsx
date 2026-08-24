@@ -179,9 +179,9 @@ export function RegistrationField({ className }: { className?: string }) {
         transition={{ duration: MOTION.duration.slow, delay: T.caption, ease: MOTION.easeOut }}
       >
         {REGISTRATION_COUNTS.requirements} requirements
-        <span className="mx-2 text-[hsl(var(--text-muted)/0.4)]">/</span>
+        <span aria-hidden="true" className="mx-2 text-[hsl(var(--text-muted)/0.4)]">/</span>
         {REGISTRATION_COUNTS.matched} matched
-        <span className="mx-2 text-[hsl(var(--text-muted)/0.4)]">/</span>
+        <span aria-hidden="true" className="mx-2 text-[hsl(var(--text-muted)/0.4)]">/</span>
         <span className="text-amber-text">{REGISTRATION_COUNTS.gaps} gaps</span>
       </motion.p>
     </div>

@@ -92,7 +92,7 @@ export function Footer() {
           >
             CareerLens<span className="text-violet-text"> AI</span>
           </Link>
-          <p className="tabular font-mono text-xs text-[hsl(var(--text-muted)/0.7)]">
+          <p className="tabular font-mono text-xs text-text-faint">
             {AUTHOR.name} · {AUTHOR.location} · 2026
           </p>
         </div>

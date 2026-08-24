@@ -72,7 +72,7 @@ export function ATSChecklist({ checks }: { checks: ATSCheck[] }) {
             {/* Shown, not hidden. `source` exists so a reader can tell a
                 measurement from the model's opinion, and a transparency field
                 that never reaches the reader is not transparency. */}
-            <p className="mt-1 font-mono text-xs text-[hsl(var(--text-muted)/0.7)]">
+            <p className="mt-1 font-mono text-xs text-text-faint">
               {check.source === 'deterministic' ? 'Checked in your CV text' : 'Assessed by the model'}
             </p>
           </li>

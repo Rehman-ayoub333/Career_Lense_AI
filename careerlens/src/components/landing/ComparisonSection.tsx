@@ -132,7 +132,7 @@ export function ComparisonSection() {
                 >
                   {row.capability}
                   {row.note ? (
-                    <span className="mt-2 block max-w-[36ch] font-mono text-xs text-[hsl(var(--text-muted)/0.8)]">
+                    <span className="mt-2 block max-w-[36ch] font-mono text-xs text-text-faint">
                       {row.note}
                     </span>
                   ) : null}

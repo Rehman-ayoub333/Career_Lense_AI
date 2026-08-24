@@ -96,7 +96,7 @@ export function AnalyzeTool({ analysis }: { analysis: AnalysisController }) {
               <h2 className="font-mono text-xs uppercase tracking-[0.16em] text-text-muted">
                 Tools
               </h2>
-              <p className="mt-1.5 max-w-prose text-xs leading-relaxed text-[hsl(var(--text-muted)/0.8)]">
+              <p className="mt-1.5 max-w-prose text-xs leading-relaxed text-text-faint">
                 Text generated from your CV and this opportunity. Unlike the evidence above, none of
                 it has been checked against your document — read it before you send it.
               </p>

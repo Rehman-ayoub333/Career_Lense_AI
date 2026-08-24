@@ -102,9 +102,9 @@ export function ResultSection() {
             </p>
             <p className="tabular mt-4 font-mono text-xs text-text-secondary">
               11 requirements
-              <span className="mx-2 text-[hsl(var(--text-muted)/0.5)]">/</span>
+              <span aria-hidden="true" className="mx-2 text-[hsl(var(--text-muted)/0.5)]">/</span>
               8 matched
-              <span className="mx-2 text-[hsl(var(--text-muted)/0.5)]">/</span>
+              <span aria-hidden="true" className="mx-2 text-[hsl(var(--text-muted)/0.5)]">/</span>
               <span className="text-amber-text">3 gaps</span>
             </p>
           </div>

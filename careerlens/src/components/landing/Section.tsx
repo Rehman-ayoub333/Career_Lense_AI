@@ -78,7 +78,7 @@ export function Section({
         {/* The folio. Small, quiet, and on every section — including the ones
             that carry almost nothing. It is the cheapest legibility signal in
             the system and the one most often left out. */}
-        <p className="tabular mt-12 font-mono text-xs text-[hsl(var(--text-muted)/0.65)]">
+        <p className="tabular mt-12 font-mono text-xs text-text-faint">
           {folio} — {id.replace(/-/g, ' ')}
         </p>
       </Container>

@@ -27,13 +27,24 @@
   --border-strong: 220 25% 32%;
 
   /* ── Text ────────────────────────────────────────────────────────────────
-     Three steps, each verified against every surface above. The previous ramp
+     Four steps, each verified against every surface above. The original ramp
      failed WCAG AA: `--text-subtle` measured 2.66:1 on the page background,
      below even the 3:1 large-text threshold, while being used for character
-     counters, upload hints and footer text.                                  */
+     counters, upload hints and footer text.
+
+     Fixing the token did not stop the failure recurring. Components wanting a
+     step quieter than `--text-muted` reached for `hsl(var(--text-muted)/0.7)`
+     and similar, which composites toward the surface and lands right back
+     under AA — 3.72:1 on `--bg`, 3.64:1 on `--surface`. Nine components had
+     done it and the Phase 10 axe sweep flagged every one.
+
+     `--text-faint` is that fourth step, made real and measured, so the quiet
+     tier is reachable without alpha. **Never alpha-reduce a text token.** The
+     ramp bottoms out here; anything quieter than this is not text.           */
   --text-primary:   210 40% 97%;   /* 18.19:1 on --bg */
   --text-secondary: 214 22% 74%;   /*  9.98:1 on --bg */
   --text-muted:     215 16% 60%;   /*  6.51:1 on --bg */
+  --text-faint:     215 16% 56%;   /*  5.68:1 on --bg, 4.61:1 on --surface-hover */
 
   /* ── Brand ───────────────────────────────────────────────────────────────
      `--violet` is a *surface* colour: white text on it measures 5.67:1, so it
@@ -160,6 +171,7 @@
   --color-text-primary: hsl(var(--text-primary));
   --color-text-secondary: hsl(var(--text-secondary));
   --color-text-muted: hsl(var(--text-muted));
+  --color-text-faint: hsl(var(--text-faint));
 
   --color-violet: hsl(var(--violet));
   --color-violet-text: hsl(var(--violet-text));

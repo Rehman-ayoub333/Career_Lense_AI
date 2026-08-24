@@ -28,6 +28,19 @@ import { logger } from '@/lib/logger'
  * detail on its own and is the only thing that lets a visitor's report be
  * correlated with the server log entry — the same job `requestId` does for a
  * failed API response.
+ *
+ * The message region carries `role="alert"`, which is the other half of the
+ * defect `TESTING_STRATEGY_FINAL.md` §Accessibility names. This boundary swaps
+ * itself in without a navigation, so a screen reader is given no reason to
+ * re-read the page and focus stays wherever it was — a sighted user sees the
+ * failure instantly and a screen-reader user is told nothing at all. `assertive`
+ * rather than `polite` for the same reason `Feedback.tsx`'s `Alert` uses it on
+ * the error tone: this interrupts a task the visitor was part-way through, so it
+ * should not queue behind whatever is being read.
+ *
+ * It does not reuse that `Alert` primitive. `Alert` is an inline message tied to
+ * a control inside a working page; this is the whole page, and the two are
+ * different constructions rather than one with a variant.
  */
 
 // `Container as="div"`: `layout.tsx` already renders the page's one `<main>`,
@@ -53,10 +66,12 @@ export default function ErrorPage({
           <AlertTriangle className="h-8 w-8 text-red-text" strokeWidth={1.5} aria-hidden="true" />
         </div>
 
-        <h1 className="text-xl font-semibold text-text-primary">Something went wrong</h1>
-        <p className="mt-2 text-sm text-text-secondary">
-          An unexpected error occurred. Please try again.
-        </p>
+        <div role="alert" aria-live="assertive">
+          <h1 className="text-xl font-semibold text-text-primary">Something went wrong</h1>
+          <p className="mt-2 text-sm text-text-secondary">
+            An unexpected error occurred. Please try again.
+          </p>
+        </div>
 
         <Button className="mt-6" onClick={() => reset()}>
           <RotateCcw className="h-4 w-4" aria-hidden="true" />

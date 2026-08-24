@@ -101,9 +101,9 @@ export function HistoryPanel({ onRestore }: { onRestore: (session: AnalysisSessi
                     </span>
                     <span className="mt-1 block font-mono text-xs text-text-muted">
                       {bandForScore(item.result.score)}
-                      <span className="mx-2 text-[hsl(var(--text-muted)/0.5)]">·</span>
+                      <span aria-hidden="true" className="mx-2 text-[hsl(var(--text-muted)/0.5)]">·</span>
                       {MODE_LABEL[item.mode]}
-                      <span className="mx-2 text-[hsl(var(--text-muted)/0.5)]">·</span>
+                      <span aria-hidden="true" className="mx-2 text-[hsl(var(--text-muted)/0.5)]">·</span>
                       {formatDate(item.date)}
                     </span>
                     <span className="sr-only">

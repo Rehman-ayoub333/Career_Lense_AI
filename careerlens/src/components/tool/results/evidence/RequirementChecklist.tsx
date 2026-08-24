@@ -53,7 +53,7 @@ export function RequirementChecklist({
             <span className="tabular">{items.length}</span>
           </h3>
 
-          <p className="mt-1.5 text-xs leading-relaxed text-[hsl(var(--text-muted)/0.8)]">
+          <p className="mt-1.5 text-xs leading-relaxed text-text-faint">
             {TIER_DESCRIPTION[tier]}
           </p>
 

@@ -36,7 +36,7 @@ export function CompensationSummary({
         <p className="mt-2 text-xs leading-relaxed text-text-muted">{context}</p>
       ) : null}
 
-      <p className="mt-2 font-mono text-xs text-[hsl(var(--text-muted)/0.7)]">
+      <p className="mt-2 font-mono text-xs text-text-faint">
         Estimated by the model from the description — not checked against market data.
       </p>
     </div>
