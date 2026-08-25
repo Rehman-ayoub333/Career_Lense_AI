@@ -33,6 +33,11 @@ const GREETING: ChatMessage = {
  * judgment, which is the right source here — this is context for a conversation
  * about what to work on, not a verification result.
  *
+ * That the field stays gone is enforced by `tests/api/schema-regression.test.ts`,
+ * not by this paragraph. It used to be the other way round, which is what
+ * `TESTING_STRATEGY_FINAL.md` §Regression meant by "protected by a schema test
+ * not just a convention".
+ *
  * The richer version, where chat can also see verification tiers and explain
  * why something reads as unresolved, is a documented SHOULD-HAVE and stays
  * deferred rather than pulled forward for convenience.
