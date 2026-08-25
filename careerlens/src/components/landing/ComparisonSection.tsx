@@ -78,7 +78,12 @@ function Mark({ value }: { value: Cell }) {
       </span>
     )
   }
-  return <Minus className="h-4 w-4 text-[hsl(var(--text-muted)/0.6)]" strokeWidth={2} aria-label="No" />
+  // `aria-label` makes this meaningful rather than decorative, which puts it
+  // under WCAG 1.4.11: it must clear 3:1 against the cell behind it. At
+  // `--text-muted/0.6` it did not. `--text-faint` is the quietest step that
+  // does, and keeps this cell lighter than the "Limited" and "Not stated"
+  // siblings, which was the point of reaching for alpha in the first place.
+  return <Minus className="h-4 w-4 text-text-faint" strokeWidth={2} aria-label="No" />
 }
 
 export function ComparisonSection() {

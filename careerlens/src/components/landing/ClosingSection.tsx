@@ -26,7 +26,7 @@ function Mark({ className }: { className: string }) {
       viewBox="0 0 12 12"
       fill="none"
       aria-hidden="true"
-      className={`absolute h-3.5 w-3.5 text-[hsl(var(--text-muted)/0.55)] ${className}`}
+      className={`absolute h-3.5 w-3.5 text-border-strong ${className}`}
     >
       <circle cx="6" cy="6" r="3.25" stroke="currentColor" strokeWidth="0.75" />
       <path

@@ -42,6 +42,12 @@ function ruleShape(line: RegistrationLine): string {
  * up to. Hand-drawn rather than taken from Lucide, which has no equivalent — and
  * this is artwork rather than an icon, so the icon size and stroke scale in
  * CLAUDE.md do not apply to it.
+ *
+ * Stroked with `--border-strong`, not a dimmed text token. It is `aria-hidden`
+ * decoration, so WCAG 1.4.11 exempts it from the 3:1 rule and no contrast fix
+ * was owed here — but "a quiet non-text rule" is exactly what the border family
+ * is for, and reaching into the text ramp for it is what produced the
+ * alpha-composited mess Phase 10b cleaned up. Right family, real token, no alpha.
  */
 function RegistrationMark({ className, delay }: { className: string; delay: number }) {
   const reduce = useReducedMotion()
@@ -51,7 +57,7 @@ function RegistrationMark({ className, delay }: { className: string; delay: numb
       viewBox="0 0 12 12"
       fill="none"
       aria-hidden="true"
-      className={cn('absolute h-3.5 w-3.5 text-[hsl(var(--text-muted)/0.75)]', className)}
+      className={cn('absolute h-3.5 w-3.5 text-border-strong', className)}
       initial={reduce ? false : { opacity: 0, scale: 0.6 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: MOTION.duration.slow, delay, ease: MOTION.easeOut }}
