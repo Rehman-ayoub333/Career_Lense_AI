@@ -27,11 +27,18 @@ export function RequirementChecklist({
   activeClaimId: string | null
   onClaimSelect: (id: string | null) => void
 }) {
+  // Zero claims has two ordinary causes and this copy has to cover both, because
+  // nothing downstream can tell them apart. Either the description was pasted in
+  // part, or the two documents were swapped and the description box is holding a
+  // CV — a real user error that `TESTING_STRATEGY_FINAL.md` §Edge cases asks for
+  // "a defined message, not a crash". Naming the swap first costs one clause and
+  // saves the reader from re-pasting a description that was never the problem.
   if (claims.length === 0) {
     return (
       <p data-testid="requirement-checklist" className="text-sm leading-relaxed text-text-muted">
-        No specific requirements could be read from the description you provided. Try pasting the
-        full text, including the responsibilities and qualifications sections.
+        No specific requirements could be read from the description you provided. Check that each
+        box holds the right document — a CV in the description box is the usual cause — and that the
+        description includes its responsibilities and qualifications.
       </p>
     )
   }

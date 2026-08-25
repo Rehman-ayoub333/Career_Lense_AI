@@ -22,7 +22,7 @@ export function CoverageSummary({ coverage }: { coverage: Coverage }) {
     return (
       <p data-testid="coverage-summary" className="font-mono text-xs leading-relaxed text-text-muted">
         No specific requirements could be read from this description, so there was nothing to check
-        the CV against.
+        the CV against. Worth confirming the right document is in each box.
       </p>
     )
   }

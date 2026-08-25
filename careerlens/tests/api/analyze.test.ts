@@ -181,6 +181,104 @@ describe('POST /api/analyze — the happy path, end to end', () => {
   })
 })
 
+/**
+ * `TESTING_STRATEGY_FINAL.md` §Edge cases: "a CV that is actually a JD pasted
+ * into the wrong box (a real user-error case worth a defined message, not a
+ * crash)".
+ *
+ * No detection logic exists for this and none is being added. Stage 1 reads a CV
+ * in the description box and finds no requirements to extract, which lands on the
+ * zero-claims path `AI_PIPELINE_FINAL.md` already defines as an empty state. The
+ * obligation this case actually carries is that the path is *reached* rather than
+ * crashed through, and that what the user is then told is not misleading — the
+ * copy half is asserted in `tests/components/empty-states.test.tsx`.
+ *
+ * Guessing at the mixup would be worse than not: the same near-empty result comes
+ * from a terse description, a bulleted job ad, and a language the model handled
+ * poorly. A message that named the swap as fact would be wrong more often than
+ * right, so the surface offers it as the first thing to check and stops there.
+ */
+describe('POST /api/analyze — the documents swapped between boxes', () => {
+  // Long enough to clear both minimums, so the request is well-formed and the
+  // failure being tested is semantic rather than a 400 about length.
+  const CV_IN_THE_JD_BOX = `Ahmed Raza — Data Analyst
+ahmed.raza@example.com | +92 301 7654321
+
+Experience
+Built dashboards in Power BI for a retail chain across three regions.
+Automated a weekly reporting pipeline that had been assembled by hand.
+
+Education
+BSc Statistics, Quaid-i-Azam University, 07/2020.`
+
+  it('returns 200 with a defined empty state rather than crashing', async () => {
+    // A CV in the description box gives Stage 1 nothing to extract requirements
+    // from, so it legitimately returns zero claims.
+    generate.mockResolvedValue(modelResponse(JSON.stringify(draft({ claims: [] }))))
+
+    const response = await POST(
+      analyzeRequest({}, { cvText: CV, jdText: CV_IN_THE_JD_BOX, mode: 'job' })
+    )
+
+    expect(response.status).toBe(200)
+
+    const data = (await readJson(response)).data as AnalysisResult
+    expect(data.claims).toEqual([])
+    expect(data.coverage.total).toBe(0)
+    expect(data.coverage.overall).toBe(0)
+    expect(Number.isNaN(data.coverage.overall)).toBe(false)
+  })
+
+  it('still returns every required field, so the results screen has nothing missing to render', async () => {
+    generate.mockResolvedValue(modelResponse(JSON.stringify(draft({ claims: [] }))))
+
+    const response = await POST(
+      analyzeRequest({}, { cvText: CV, jdText: CV_IN_THE_JD_BOX, mode: 'job' })
+    )
+    const data = (await readJson(response)).data as AnalysisResult
+
+    // An empty state is a complete response with an empty collection in it, not
+    // a partial response. Every panel still has something defined to render.
+    expect(Object.keys(data).sort()).toEqual([
+      'ats_checks',
+      'claims',
+      'coverage',
+      'interview_questions',
+      'key_actions',
+      'salary_context',
+      'salary_range',
+      'score',
+      'verdict',
+    ])
+    expect(data.coverage.byCategory).toEqual({})
+  })
+
+  it('does not invent a claim to avoid the empty state', async () => {
+    // The failure mode worth guarding: a pipeline that treats "nothing found" as
+    // an error condition and pads the result rather than reporting it.
+    generate.mockResolvedValue(modelResponse(JSON.stringify(draft({ claims: [] }))))
+
+    await POST(analyzeRequest({}, { cvText: CV, jdText: CV_IN_THE_JD_BOX, mode: 'job' }))
+
+    // One call. No retry, no repair — zero claims is a valid response, not a
+    // malformed one.
+    expect(generate).toHaveBeenCalledTimes(1)
+  })
+
+  it('accepts the swap as well-formed input, since neither box can be validated by shape', async () => {
+    // Both documents are free text over the minimum length. There is no shape
+    // test that separates a CV from a job description, which is exactly why this
+    // reaches the model at all rather than being rejected at the boundary.
+    generate.mockResolvedValue(modelResponse(JSON.stringify(draft({ claims: [] }))))
+
+    const response = await POST(
+      analyzeRequest({}, { cvText: CV_IN_THE_JD_BOX, jdText: CV, mode: 'job' })
+    )
+
+    expect(response.status).toBe(200)
+  })
+})
+
 describe('POST /api/analyze — response shaping and research mode', () => {
   beforeEach(() => {
     generate.mockResolvedValue(modelResponse(JSON.stringify(draft())))
