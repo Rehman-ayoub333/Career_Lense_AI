@@ -117,6 +117,19 @@ export const POST = createApiRoute<AnalysisResult | ResearchAnalysisResult>({
         : getJobAnalysisPrompt(cvText, jdText),
       schema: isScholarship ? SCHOLARSHIP_ANALYSIS_SCHEMA : ANALYSIS_SCHEMA,
       validate: isAnalysisDraft,
+      // ADR-25. This call previously set nothing and inherited the provider's
+      // 4096 default, which was carried over unexamined from the Gemini config.
+      // It is the largest output in the app by a wide margin — every requirement
+      // the opportunity states, each with a quote and a rationale, plus 8 ATS
+      // checks, 5 interview questions and 3 key actions — and a detailed CV/JD
+      // pair can plausibly exceed 4096. Truncation here is not a soft failure:
+      // the tool call comes back malformed, the guard rejects it, and the single
+      // repair attempt burns on a request that was never going to fit.
+      //
+      // Anthropic bills generated tokens, not the ceiling, so the headroom is
+      // free. 8192 rather than Haiku 4.5's 64k maximum because an unbounded
+      // ceiling only raises worst-case latency.
+      maxOutputTokens: 8192,
       signal,
     })
 

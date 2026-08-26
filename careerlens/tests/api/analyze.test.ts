@@ -167,6 +167,17 @@ describe('POST /api/analyze — the happy path, end to end', () => {
     expect(generate).toHaveBeenCalledTimes(1)
   })
 
+  it('ADR-25: asks for 8192 output tokens rather than inheriting the provider default', async () => {
+    // This route produces the largest output in the app and used to inherit the
+    // 4096 default carried over unexamined from the Gemini config. Asserted
+    // explicitly because a truncated response here is not a soft failure: the
+    // tool call comes back malformed and the repair attempt burns on a request
+    // that could never have fit.
+    await POST(analyzeRequest())
+
+    expect(generate.mock.calls[0][0].maxOutputTokens).toBe(8192)
+  })
+
   it('handles a zero-claim response as a defined empty state, not an error', async () => {
     generate.mockResolvedValue(modelResponse(JSON.stringify(draft({ claims: [] }))))
 

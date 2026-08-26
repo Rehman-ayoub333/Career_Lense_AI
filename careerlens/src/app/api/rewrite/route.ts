@@ -38,6 +38,15 @@ export const POST = createApiRoute<RewriteResult>({
       // every bullet collapse into the same sentence template. Re-generate would
       // otherwise return near-identical output and feel broken.
       temperature: 0.4,
+      // ADR-25 requires every call site to carry an examined value rather than
+      // inherit one. This was the second silent inheritor of the 4096 default.
+      //
+      // Sized to this route's own shape, not copied from /api/analyze: the
+      // output is exactly 5 original bullets plus 5 rewrites, so a few hundred
+      // tokens in practice. 2048 is several times the realistic ceiling and
+      // still well under what analyze needs — a CV bullet that overran this
+      // would be a prompt-adherence bug, not a budget problem.
+      maxOutputTokens: 2048,
       signal,
     })
 

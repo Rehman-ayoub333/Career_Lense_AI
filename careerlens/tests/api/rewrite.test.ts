@@ -170,6 +170,17 @@ describe('POST /api/rewrite — response shape is unaffected either way', () => 
     expect(with_).toEqual(without)
   })
 
+  it('ADR-25: carries its own examined output budget, not analyze\'s', async () => {
+    // The point of the ADR-25 clause: every call site sets a value sized to its
+    // own output shape. Ten bullets is a few hundred tokens, so 2048 rather than
+    // the 8192 /api/analyze needs. Asserted as a distinct number so a copy-paste
+    // of analyze's budget onto this route fails rather than passing quietly.
+    await POST(rewriteRequest({ cvText: CV, jdText: JD }))
+
+    const request = generate.mock.calls[generate.mock.calls.length - 1][0]
+    expect(request.maxOutputTokens).toBe(2048)
+  })
+
   it('adds no claims field to the response', async () => {
     const data = (await readData({ cvText: CV, jdText: JD, claims: CLAIMS })) as Record<
       string,
