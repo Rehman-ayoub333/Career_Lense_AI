@@ -4,6 +4,7 @@ import {
   normalizeAnalysisDraft,
   normalizeRewriteResult,
 } from '@/lib/analysis/guards'
+import { EXPECTED_COUNTS } from '@/lib/analysis/constants'
 import type { AnalysisDraft, ClaimDraft } from '@/types'
 
 function claimDraft(overrides: Partial<ClaimDraft> = {}): ClaimDraft {
@@ -17,16 +18,36 @@ function claimDraft(overrides: Partial<ClaimDraft> = {}): ClaimDraft {
   }
 }
 
+/**
+ * The eight ATS ids the prompt fixes, in order.
+ *
+ * Spelled out rather than generated so the fixture looks like real model output.
+ * It used to be a single check, which passed the old `length > 0` guard — the
+ * exact-count rule (EXPECTED_COUNTS.atsChecks) is what made that fixture invalid
+ * and is the reason this is now eight.
+ */
+const atsChecks = (): AnalysisDraft['ats_checks'] =>
+  ['headings', 'tables', 'contact', 'keywords', 'dates', 'graphics', 'length', 'fonts'].map(
+    (id) => ({ id, label: `Check: ${id}`, status: 'pass' as const, note: 'Fine.' })
+  )
+
+const interviewQuestions = (): AnalysisDraft['interview_questions'] =>
+  Array.from({ length: 5 }, (_, index) => ({
+    question: `Question ${index + 1}?`,
+    skill_tested: 'Delivery',
+    tip: 'Use STAR.',
+  }))
+
 function validDraft(overrides: Partial<AnalysisDraft> = {}): AnalysisDraft {
   return {
     score: 72,
     verdict: 'Good Match',
     claims: [claimDraft()],
     key_actions: ['Add Kubernetes', 'Quantify impact', 'Reorder sections'],
-    ats_checks: [{ id: 'headings', label: 'Standard headings', status: 'pass', note: 'Clear.' }],
+    ats_checks: atsChecks(),
     salary_range: '$90,000 - $120,000',
     salary_context: 'Reflects mid-level frontend work in a major metro.',
-    interview_questions: [{ question: 'Describe a rollout.', skill_tested: 'Delivery', tip: 'Use STAR.' }],
+    interview_questions: interviewQuestions(),
     ...overrides,
   }
 }
@@ -45,10 +66,12 @@ describe('isAnalysisDraft', () => {
   })
 
   it('rejects an ATS check with an unknown status', () => {
-    const broken = validDraft({
-      ats_checks: [{ id: 'headings', label: 'Headings', status: 'maybe' as never, note: 'x' }],
-    })
-    expect(isAnalysisDraft(broken)).toBe(false)
+    // Eight checks, one of them bad — so this isolates the status rule rather
+    // than tripping the exact-count rule on the way past it.
+    const checks = atsChecks()
+    checks[3] = { id: 'keywords', label: 'Keywords', status: 'maybe' as never, note: 'x' }
+
+    expect(isAnalysisDraft(validDraft({ ats_checks: checks }))).toBe(false)
   })
 
   it('rejects a score that is not a finite number', () => {
@@ -60,6 +83,48 @@ describe('isAnalysisDraft', () => {
     expect(isAnalysisDraft(validDraft({ ats_checks: [] }))).toBe(false)
     expect(isAnalysisDraft(validDraft({ interview_questions: [] }))).toBe(false)
     expect(isAnalysisDraft(validDraft({ key_actions: [] }))).toBe(false)
+  })
+
+  /**
+   * The counts Anthropic's strict mode can no longer enforce.
+   *
+   * Gemini's decoder was handed `minItems`/`maxItems` and could not emit a
+   * non-conforming array. Anthropic's strict subset rejects those keywords, so
+   * `toAnthropicSchema` drops them (ADR-22) and this guard is the only thing
+   * left holding the contract. Before these tests the guard checked `length > 0`,
+   * so an analysis with one ATS check instead of eight validated cleanly and
+   * rendered a near-empty panel.
+   *
+   * Under-count and over-count are both asserted: a decoder could violate the
+   * floor or the ceiling, and `> 0` caught neither.
+   */
+  describe('exact counts, since the decoder no longer enforces them (ADR-22)', () => {
+    it('requires exactly 8 ATS checks, rejecting both 7 and 9', () => {
+      expect(isAnalysisDraft(validDraft({ ats_checks: atsChecks().slice(0, 7) }))).toBe(false)
+      expect(isAnalysisDraft(validDraft({ ats_checks: [...atsChecks(), ...atsChecks().slice(0, 1)] }))).toBe(false)
+      expect(isAnalysisDraft(validDraft({ ats_checks: atsChecks() }))).toBe(true)
+    })
+
+    it('requires exactly 5 interview questions, rejecting both 4 and 6', () => {
+      const five = interviewQuestions()
+      expect(isAnalysisDraft(validDraft({ interview_questions: five.slice(0, 4) }))).toBe(false)
+      expect(isAnalysisDraft(validDraft({ interview_questions: [...five, five[0]] }))).toBe(false)
+      expect(isAnalysisDraft(validDraft({ interview_questions: five }))).toBe(true)
+    })
+
+    it('requires exactly 3 key actions, rejecting both 2 and 4', () => {
+      expect(isAnalysisDraft(validDraft({ key_actions: ['a', 'b'] }))).toBe(false)
+      expect(isAnalysisDraft(validDraft({ key_actions: ['a', 'b', 'c', 'd'] }))).toBe(false)
+      expect(isAnalysisDraft(validDraft({ key_actions: ['a', 'b', 'c'] }))).toBe(true)
+    })
+
+    it('reads the counts from EXPECTED_COUNTS rather than hard-coding them twice', () => {
+      // The prompt text and the schema descriptions are built from this same
+      // constant. Three copies of "8" is three chances to drift.
+      expect(EXPECTED_COUNTS.atsChecks).toBe(8)
+      expect(EXPECTED_COUNTS.interviewQuestions).toBe(5)
+      expect(EXPECTED_COUNTS.keyActions).toBe(3)
+    })
   })
 
   it('accepts an empty claims array — zero requirements is a defined empty state, not a malformed response', () => {

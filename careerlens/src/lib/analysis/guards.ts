@@ -8,7 +8,13 @@ import type {
   RewriteResult,
 } from '@/types'
 
-import { ATS_STATUSES, CLAIM_CATEGORIES, CLAIM_STATUSES, MATCH_VERDICTS } from './constants'
+import {
+  ATS_STATUSES,
+  CLAIM_CATEGORIES,
+  CLAIM_STATUSES,
+  EXPECTED_COUNTS,
+  MATCH_VERDICTS,
+} from './constants'
 
 /**
  * Runtime shape validation for model output.
@@ -28,6 +34,31 @@ function isStringArray(value: unknown): value is string[] {
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value)
+}
+
+/**
+ * Exactly `count` items — not "at least one".
+ *
+ * These counts used to be impossible to violate: Gemini's constrained decoder
+ * was handed `minItems`/`maxItems` and would not emit a non-conforming array.
+ * Anthropic's strict mode does not accept those keywords (ADR-22), so
+ * `toAnthropicSchema` drops them and the guarantee has to be re-made here or it
+ * does not exist at all.
+ *
+ * Until this was added the guard only checked `length > 0`, which meant an
+ * analysis with one ATS check instead of eight passed validation and rendered a
+ * near-empty panel. `EXPECTED_COUNTS` is the same constant the prompt text and
+ * the schema descriptions are built from, so there is one number per contract
+ * rather than three copies that can drift.
+ *
+ * The trade-off is deliberate and worth naming: a count deviation now costs a
+ * repair attempt and, if it repeats, the whole analysis. That is louder than
+ * silently under-delivering a contract the product documents — but it is louder,
+ * and if live testing shows the model routinely returning 7 checks, the right
+ * answer is to relax the contract, not to weaken the guard back to `> 0`.
+ */
+function hasExactly(value: unknown, count: number): boolean {
+  return Array.isArray(value) && value.length === count
 }
 
 /** No `source`: which mechanism decided is recorded downstream, never claimed here. */
@@ -105,19 +136,19 @@ export function isAnalysisDraft(value: unknown): value is AnalysisDraft {
     typeof result.verdict === 'string' &&
     (MATCH_VERDICTS as readonly string[]).includes(result.verdict) &&
     isStringArray(result.key_actions) &&
-    result.key_actions.length > 0 &&
+    hasExactly(result.key_actions, EXPECTED_COUNTS.keyActions) &&
     // An empty claims array is valid: an opportunity description too vague to
     // yield requirements is a defined empty state, not a malformed response.
+    // This is the one collection with no expected count, deliberately — see the
+    // `claims` note in `schemas.ts`.
     Array.isArray(result.claims) &&
     result.claims.every(isClaimDraft) &&
-    Array.isArray(result.ats_checks) &&
-    result.ats_checks.length > 0 &&
-    result.ats_checks.every(isATSCheckDraft) &&
+    hasExactly(result.ats_checks, EXPECTED_COUNTS.atsChecks) &&
+    (result.ats_checks as unknown[]).every(isATSCheckDraft) &&
     typeof result.salary_range === 'string' &&
     typeof result.salary_context === 'string' &&
-    Array.isArray(result.interview_questions) &&
-    result.interview_questions.length > 0 &&
-    result.interview_questions.every(isInterviewQuestion)
+    hasExactly(result.interview_questions, EXPECTED_COUNTS.interviewQuestions) &&
+    (result.interview_questions as unknown[]).every(isInterviewQuestion)
   )
 }
 

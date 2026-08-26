@@ -75,12 +75,16 @@ function draft(overrides: Partial<AnalysisDraft> = {}): AnalysisDraft {
       },
     ],
     key_actions: ['Add evidence of container work', 'Quantify the migration', 'Name the stack'],
-    ats_checks: [{ id: 'headings', label: 'Standard headings', status: 'pass', note: 'Clear.' }],
+    ats_checks: ['headings', 'tables', 'contact', 'keywords', 'dates', 'graphics', 'length', 'fonts'].map(
+      (id) => ({ id, label: `Check: ${id}`, status: 'pass' as const, note: 'Fine.' })
+    ),
     salary_range: '$95,000 - $120,000 USD',
     salary_context: 'Reflects mid-level frontend work.',
-    interview_questions: [
-      { question: 'Describe the migration.', skill_tested: 'Delivery', tip: 'Use STAR.' },
-    ],
+    interview_questions: Array.from({ length: 5 }, (_, i) => ({
+      question: `Question ${i + 1}?`,
+      skill_tested: 'Delivery',
+      tip: 'Use STAR.',
+    })),
     ...overrides,
   }
 }

@@ -70,10 +70,16 @@ function draft(overrides: Partial<AnalysisDraft> = {}): AnalysisDraft {
       },
     ],
     key_actions: ['Add evidence of container work', 'Quantify the migration', 'Name the stack'],
-    ats_checks: [{ id: 'headings', label: 'Standard headings', status: 'pass', note: 'Clear.' }],
+    ats_checks: ['headings', 'tables', 'contact', 'keywords', 'dates', 'graphics', 'length', 'fonts'].map(
+      (id) => ({ id, label: `Check: ${id}`, status: 'pass' as const, note: 'Fine.' })
+    ),
     salary_range: '$95,000 - $120,000 USD',
     salary_context: 'Reflects mid-level frontend work.',
-    interview_questions: [{ question: 'Describe the migration.', skill_tested: 'Delivery', tip: 'Use STAR.' }],
+    interview_questions: Array.from({ length: 5 }, (_, i) => ({
+      question: `Question ${i + 1}?`,
+      skill_tested: 'Delivery',
+      tip: 'Use STAR.',
+    })),
     ...overrides,
   }
 }
@@ -153,13 +159,32 @@ describe('POST /api/analyze — the happy path, end to end', () => {
     expect(data.score).toBe(100)
     expect(data.verdict).toBe('Good Match')
     expect(data.key_actions).toHaveLength(3)
-    expect(data.interview_questions).toHaveLength(1)
+    expect(data.interview_questions).toHaveLength(5)
   })
 
-  it('records every ATS check as model-sourced, since no deterministic check exists yet', async () => {
+  it('attributes each ATS check to the mechanism that actually decided it', async () => {
+    // This test used to assert every check was model-sourced, "since no
+    // deterministic check exists yet". That premise died with ADR-20, which gave
+    // dates/contact/tables real logic — but the fixture only carried `headings`,
+    // so the assertion kept passing vacuously. Expanding the fixture to the full
+    // eight (required by the ADR-22 exact-count guard) is what surfaced it.
     const data = (await readJson(await POST(analyzeRequest()))).data as AnalysisResult
 
-    expect(data.ats_checks.every((check) => check.source === 'model')).toBe(true)
+    const source = Object.fromEntries(data.ats_checks.map((check) => [check.id, check.source]))
+
+    // The five nothing-can-check-them ids stay the model's word.
+    for (const id of ['headings', 'keywords', 'graphics', 'length', 'fonts']) {
+      expect(source[id]).toBe('model')
+    }
+
+    // The three ADR-20 ids are decided in code when the CV is conclusive, and
+    // fall back to the model when it is not — either is correct, but every check
+    // must carry an attribution so a guess stays distinguishable from a measurement.
+    for (const id of ['dates', 'contact', 'tables']) {
+      expect(['deterministic', 'model']).toContain(source[id])
+    }
+
+    expect(data.ats_checks).toHaveLength(8)
   })
 
   it('calls the model exactly once when the first response is valid', async () => {
