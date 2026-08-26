@@ -76,7 +76,28 @@ off or quietly dropped.
 Distinct from the above, because this one is a genuine open question rather than
 a settled property.
 
-### D1 — Oversized text input is truncated, not rejected
+### D1 — Oversized text input is truncated, not rejected — **RESOLVED**
+
+> **Resolved (provider-swap phase).** `parseTextField` now **rejects** over-length
+> input with an actionable message naming the excess and the ceiling, and measures
+> the whole submitted document rather than an already-clipped copy. The deciding
+> argument was not the spec divergence but a correctness one: `cvText` is the
+> document `grounding.ts` searches, so a quote living past the 8000-character
+> ceiling was cut away, the verifier could not find it, and the claim came back
+> `unresolved` — which the product presents to the reader as a fact about the
+> document. Silent truncation turned that into a fact about a limit the user was
+> never told about.
+>
+> `/api/chat`'s `message` field is the one deliberate exception and opts back into
+> truncation via `onOverflow: 'truncate'`: a question is not evidence, nothing
+> grounds against it, and its 500-character ceiling is a cost budget rather than a
+> correctness boundary.
+>
+> Also closes the §3 sub-item "4xx on oversized input — not covered at the route
+> boundary": `tests/api/analyze.test.ts` now drives a 9000-character CV through
+> the real route and asserts 400 plus no model call.
+>
+> The original finding is preserved below.
 
 `TESTING_STRATEGY_FINAL.md` describes oversized input as *rejected* at the
 boundary, in §API ("correct 4xx on missing/oversized input") and again in

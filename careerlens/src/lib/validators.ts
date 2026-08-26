@@ -42,7 +42,7 @@ export function stripHtmlTags(value: string): string {
  * Unicode letters are preserved deliberately — accented names and non-Latin
  * scripts are the common case for this audience, not an edge case.
  */
-export function sanitizeText(value: string, maxLength: number): string {
+export function sanitizeText(value: string, maxLength: number = Number.MAX_SAFE_INTEGER): string {
   return value
     .replace(CONTROL_CHARS, ' ')
     .replace(INVISIBLE_CHARS, '')
@@ -62,6 +62,25 @@ interface TextFieldOptions {
   label: string
   min: number
   max: number
+  /**
+   * What to do when the field is longer than `max`. Defaults to `'reject'`.
+   *
+   * This used to be truncation, unconditionally and silently, and it was wrong
+   * for the fields that matter most. `cvText` is the document `grounding.ts`
+   * searches for evidence: clipping it at 8000 characters means a claim can cite
+   * a quote that lived at character 8500, the verifier cannot find it, and the
+   * claim is reported `unresolved` — indistinguishable, to the reader, from the
+   * CV genuinely not supporting it. The product's central promise is that an
+   * unresolved claim is a fact about the document; silent truncation makes it a
+   * fact about a limit the user was never told about.
+   *
+   * Rejecting is also the kinder failure. A user who pasted too much can delete
+   * some; a user whose evidence was clipped away has no idea anything happened.
+   *
+   * `'truncate'` remains available for fields where the content is not evidence
+   * and the ceiling is a deliberate budget rather than a correctness boundary.
+   */
+  onOverflow?: 'reject' | 'truncate'
 }
 
 /**
@@ -71,6 +90,10 @@ interface TextFieldOptions {
  * actually receives, and the error names the field so the user knows which box to
  * fix — the previous shared message ("Input must be at least 100 characters")
  * could not tell the CV box from the job description box.
+ *
+ * Sanitisation no longer truncates on the way in: the length is measured against
+ * the whole submitted document, so an over-long CV is caught rather than quietly
+ * clipped to fit. See `onOverflow`.
  *
  * @throws {AppError} `VALIDATION_ERROR`
  */
@@ -82,12 +105,24 @@ export function parseTextField(value: unknown, options: TextFieldOptions): strin
     })
   }
 
-  const sanitized = sanitizeText(value, options.max)
+  const sanitized = sanitizeText(value)
 
   if (sanitized.length < options.min) {
     throw new AppError('VALIDATION_ERROR', {
       publicMessage: `Your ${options.label} is too short. Please add at least ${options.min - sanitized.length} more characters.`,
       detail: `Field "${options.label}" was ${sanitized.length} chars after sanitisation, minimum ${options.min}.`,
+    })
+  }
+
+  if (sanitized.length > options.max) {
+    if (options.onOverflow === 'truncate') return sanitized.slice(0, options.max)
+
+    const excess = sanitized.length - options.max
+    throw new AppError('VALIDATION_ERROR', {
+      // Actionable: how much to remove, and what the ceiling is. "Too long" on
+      // its own leaves the user guessing at both.
+      publicMessage: `Your ${options.label} is too long by ${excess} characters. The limit is ${options.max} — please shorten it and try again.`,
+      detail: `Field "${options.label}" was ${sanitized.length} chars after sanitisation, maximum ${options.max}.`,
     })
   }
 

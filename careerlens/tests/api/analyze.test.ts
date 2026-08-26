@@ -475,6 +475,23 @@ describe('POST /api/analyze — request validation', () => {
     expect(generate).not.toHaveBeenCalled()
   })
 
+  it('rejects an over-long CV with 400 rather than truncating it (D1)', async () => {
+    // Closes the "4xx on oversized input — not covered at the route boundary"
+    // gap from TESTING_COVERAGE_REPORT.md, now that the boundary actually
+    // rejects. Asserted here and not only in validators.test.ts because the
+    // divergence that gap described was between the spec and the *route*.
+    const response = await POST(
+      analyzeRequest({}, { cvText: 'a'.repeat(9000), jdText: JD, mode: 'job' })
+    )
+    const body = await readJson(response)
+
+    expect(response.status).toBe(400)
+    expect(body.error).toBe('VALIDATION_ERROR')
+    expect(String(body.message)).toContain('too long')
+    // The whole point: no model call was made against a silently clipped CV.
+    expect(generate).not.toHaveBeenCalled()
+  })
+
   it('rejects a malformed JSON body with 400', async () => {
     const request = new Request('http://localhost/api/analyze', {
       method: 'POST',

@@ -30,6 +30,17 @@ export const POST = createApiRoute<ChatResponse>({
       label: 'question',
       min: INPUT_LIMITS.chatMessage.min,
       max: INPUT_LIMITS.chatMessage.max,
+      // The one field deliberately left truncating when `parseTextField` moved
+      // to rejecting (D1). A chat question is not evidence: nothing grounds
+      // against it, no claim cites it, and the 500-character ceiling is a cost
+      // budget on the highest-frequency endpoint rather than a correctness
+      // boundary. Changing it would alter behaviour on a field the D1 finding
+      // did not concern, so it is held at the existing behaviour pending an
+      // explicit decision.
+      //
+      // Worth revisiting on its own: truncating a question mid-sentence and
+      // answering the fragment is arguably its own small correctness problem.
+      onOverflow: 'truncate',
     })
 
     const reply = await generateText({

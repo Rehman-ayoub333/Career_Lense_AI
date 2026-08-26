@@ -80,6 +80,71 @@ describe('parseTextField', () => {
       expect(appError.publicMessage).not.toContain('sanitisation')
     }
   })
+
+  /**
+   * D1, resolved.
+   *
+   * This function used to sanitise with `sanitizeText(value, options.max)`,
+   * which slices — so an over-long field was silently clipped and accepted. For
+   * `cvText` that is a correctness bug, not a cosmetic one: `grounding.ts`
+   * searches the CV for the quote a claim cites, so evidence living past the
+   * ceiling is cut away and the claim comes back `unresolved`, which the product
+   * presents as a fact about the document. The user is never told a limit was
+   * applied.
+   */
+  describe('over-length input is rejected, not silently truncated (D1)', () => {
+    it('rejects rather than clipping to fit', () => {
+      const tooLong = 'a'.repeat(options.max + 1)
+      expect(() => parseTextField(tooLong, options)).toThrow(AppError)
+    })
+
+    it('tells the user how much to remove and what the ceiling is', () => {
+      // "Too long" alone leaves them guessing at both numbers.
+      try {
+        parseTextField('a'.repeat(options.max + 25), options)
+        throw new Error('should have thrown')
+      } catch (error) {
+        const message = (error as AppError).publicMessage
+        expect(message).toContain('25 characters')
+        expect(message).toContain(String(options.max))
+        expect((error as AppError).code).toBe('VALIDATION_ERROR')
+      }
+    })
+
+    it('accepts input exactly at the ceiling, so the limit is inclusive', () => {
+      const exact = 'a'.repeat(options.max)
+      expect(parseTextField(exact, options)).toHaveLength(options.max)
+    })
+
+    it('measures the whole document, not an already-clipped copy', () => {
+      // The old implementation truncated before measuring, so a 10x-over-length
+      // CV looked exactly like one at the ceiling and passed.
+      const wayOver = 'a'.repeat(options.max * 10)
+      expect(() => parseTextField(wayOver, options)).toThrow(AppError)
+    })
+
+    it('still truncates when a call site explicitly opts in', () => {
+      // /api/chat's question field, which is not evidence — held deliberately.
+      const tooLong = 'a'.repeat(options.max + 40)
+      const result = parseTextField(tooLong, { ...options, onOverflow: 'truncate' })
+
+      expect(result).toHaveLength(options.max)
+    })
+
+    it('still names the floor for a short field, rather than the new ceiling', () => {
+      // The min check runs first; adding the max check must not change which
+      // message a too-short field gets. Asserted on publicMessage, not on
+      // `message` — AppError's `message` carries the developer-only detail.
+      try {
+        parseTextField('short', options)
+        throw new Error('should have thrown')
+      } catch (error) {
+        const message = (error as AppError).publicMessage
+        expect(message).toContain('too short')
+        expect(message).not.toContain('too long')
+      }
+    })
+  })
 })
 
 describe('parseObjectBody', () => {
