@@ -32,7 +32,7 @@ import { DATASET_DIR } from './run.ts'
  *
  * Run with `node --test research/scripts/lib/lib.test.ts` — Node's own runner,
  * no test framework, no dependency. What is NOT covered here is the part that
- * calls the API, which is blocked on a working GOOGLE_API_KEY and is reported as
+ * calls the API, which is blocked on a working ANTHROPIC_API_KEY and is reported as
  * blocked rather than stubbed into a green tick.
  */
 
@@ -326,7 +326,7 @@ describe('embedding baseline', () => {
    * explicitly and restore it. Asserting against whatever happens to be in the
    * developer's shell would make the suite pass or fail for reasons unrelated to
    * the code — and this suite has to stay green both before and after
-   * `GOOGLE_API_KEY` is populated.
+   * `VOYAGE_API_KEY` is populated.
    */
   function withEnv<T>(overrides: Record<string, string | undefined>, run: () => T): T {
     const saved = new Map<string, string | undefined>()
@@ -349,29 +349,39 @@ describe('embedding baseline', () => {
   it('refuses rather than silently degrading to something weaker', () => {
     // A baseline that quietly returns a plausible number is worse than an absent
     // one, because the comparison still gets published. Experiment 1 reports
-    // without it (ADR-21).
-    withEnv({ GOOGLE_API_KEY: undefined, GEMINI_API_KEY: undefined }, () => {
+    // without it (ADR-23).
+    withEnv({ VOYAGE_API_KEY: undefined }, () => {
       assert.throws(() => getEmbeddingBaseline(), EmbeddingBaselineNotConfiguredError)
     })
   })
 
   it('treats a whitespace-only key as absent, not as a credential', () => {
-    withEnv({ GOOGLE_API_KEY: '   ', GEMINI_API_KEY: undefined }, () => {
+    withEnv({ VOYAGE_API_KEY: '   ' }, () => {
       assert.throws(() => getEmbeddingBaseline(), EmbeddingBaselineNotConfiguredError)
     })
   })
 
-  it('builds against Gemini once a credential exists, defaulting the model', () => {
-    withEnv({ GOOGLE_API_KEY: 'test-key', GOOGLE_EMBEDDING_MODEL: undefined }, () => {
-      assert.equal(getEmbeddingBaseline().model, 'text-embedding-004')
+  it('does not accept the generation credential in place of the embedding one', () => {
+    // ADR-23 made these separate vendors. An ANTHROPIC_API_KEY satisfying this
+    // check would be a silent misconfiguration that only fails at the network,
+    // and it would undercut the privacy spec's claim that the two credentials
+    // reach two different processors.
+    withEnv({ VOYAGE_API_KEY: undefined, ANTHROPIC_API_KEY: 'sk-ant-test' }, () => {
+      assert.throws(() => getEmbeddingBaseline(), EmbeddingBaselineNotConfiguredError)
     })
   })
 
-  it('lets GOOGLE_EMBEDDING_MODEL roll the model forward without a code change', () => {
+  it('builds against Voyage once a credential exists, defaulting the model', () => {
+    withEnv({ VOYAGE_API_KEY: 'test-key', VOYAGE_MODEL: undefined }, () => {
+      assert.equal(getEmbeddingBaseline().model, 'voyage-4')
+    })
+  })
+
+  it('lets VOYAGE_MODEL roll the model forward without a code change', () => {
     // The model string lands in every run's config.json, so it has to be the
     // one actually used, not a hard-coded default that silently diverges.
-    withEnv({ GOOGLE_API_KEY: 'test-key', GOOGLE_EMBEDDING_MODEL: 'gemini-embedding-001' }, () => {
-      assert.equal(getEmbeddingBaseline().model, 'gemini-embedding-001')
+    withEnv({ VOYAGE_API_KEY: 'test-key', VOYAGE_MODEL: 'voyage-4-large' }, () => {
+      assert.equal(getEmbeddingBaseline().model, 'voyage-4-large')
     })
   })
 

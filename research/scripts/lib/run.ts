@@ -53,7 +53,7 @@ export function buildRunConfig(options: {
 }): RunConfig {
   return {
     experiment: options.experiment,
-    model: process.env.GOOGLE_MODEL ?? 'gemini-2.5-flash',
+    model: process.env.ANTHROPIC_MODEL ?? 'claude-haiku-4-5-20251001',
     temperature: 0,
     runsPerItem: options.runsPerItem ?? 1,
     datasetVersion: options.dataset.version,
