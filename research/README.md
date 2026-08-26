@@ -2,7 +2,9 @@
 
 The evaluation harness for CareerLens's evidence-grounding contribution. Sibling to `careerlens/`, never inside it.
 
-> **Status: the harness works, the experiments have not been run.** Every script here is implemented and its pure logic is unit-tested. None has been run end-to-end, because that needs a working `ANTHROPIC_API_KEY` and a labelled dataset, and neither exists yet. No results are claimed anywhere in this directory.
+> **Status: the harness works, the experiments have not been run.** Every script here is implemented and its pure logic is unit-tested. None has been run end-to-end, because that needs a labelled dataset, which does not exist yet (Phase 8). No results are claimed anywhere in this directory.
+>
+> The other half of that blocker is now cleared: `ANTHROPIC_API_KEY` is populated and the application pipeline these scripts drive has been verified live — one real `POST /api/analyze`, end to end, on 26 Aug 2026 (`LIVE_SMOKE_TEST.md`). The dataset is the only remaining dependency.
 
 ## What blocks what
 
@@ -11,7 +13,7 @@ The evaluation harness for CareerLens's evidence-grounding contribution. Sibling
 | Harness code | Written, typechecked, 45 unit tests passing | — |
 | Scaffold dataset (5 items) | Exists, validates | — |
 | Real dataset (60–150 items) | **Not started** | Human labelling work |
-| Experiment 1 / 2 / 3 runs | **Never run** | `ANTHROPIC_API_KEY`, then the dataset |
+| Experiment 1 / 2 / 3 runs | **Never run** | the dataset (the key is populated and the pipeline is live-verified) |
 | Embedding baseline | Implemented (ADR-23), never run | `VOYAGE_API_KEY` |
 
 ## Requirements

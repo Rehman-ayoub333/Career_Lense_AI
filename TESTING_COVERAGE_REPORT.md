@@ -4,9 +4,17 @@ Measured against `TESTING_STRATEGY_FINAL.md`, category by category. This is a
 report of what exists, not a restatement of what was planned. Where a category is
 short, it says so and says what is missing.
 
-**Suite as it stands:** 387 Jest tests across 24 suites, 21 Playwright tests
-across 2 spec files, 45 further unit tests in `research/`. Nothing here has been
-run against a live `ANTHROPIC_API_KEY`; every AI call is mocked or intercepted.
+**Suite as it stands:** 400 Jest tests across 24 suites, 21 Playwright tests
+across 2 spec files, 46 further unit tests in `research/`. **No test in any of
+those suites contacts a live provider** — every AI call is mocked or
+intercepted, which is deliberate and unchanged.
+
+Separately from the suites, the pipeline has now been exercised against a live
+`ANTHROPIC_API_KEY` exactly once, on 26 Aug 2026: one real `POST /api/analyze`,
+end to end, documented in `LIVE_SMOKE_TEST.md`. That closes the "never run"
+caveat on the *pipeline*; it does not turn any of the automated coverage below
+into live coverage, and the two live-key items in §9 and "What is left" remain
+open.
 
 **Summary:** 7 of 12 categories genuinely covered, 4 partial, 1 obsolete in the
 good direction.
