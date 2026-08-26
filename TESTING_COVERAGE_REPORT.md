@@ -6,7 +6,7 @@ short, it says so and says what is missing.
 
 **Suite as it stands:** 387 Jest tests across 24 suites, 21 Playwright tests
 across 2 spec files, 45 further unit tests in `research/`. Nothing here has been
-run against a live `GOOGLE_API_KEY`; every AI call is mocked or intercepted.
+run against a live `ANTHROPIC_API_KEY`; every AI call is mocked or intercepted.
 
 **Summary:** 7 of 12 categories genuinely covered, 4 partial, 1 obsolete in the
 good direction.
@@ -395,7 +395,7 @@ document updated rather than left to look unmet.
 5. **Unit coverage for `HistoryPanel`, `AnalyzeTool`, the tools tabs and
    `Hallmark`** — moderate; all four have e2e coverage today.
 
-Not on this list, because they need a live `GOOGLE_API_KEY` and belong to the
+Not on this list, because they need a live `ANTHROPIC_API_KEY` and belong to the
 live-smoke phase: the Stage 1 prompt-injection assertion, and any end-to-end
 assertion about real model output.
 

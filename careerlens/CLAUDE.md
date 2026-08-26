@@ -8,9 +8,12 @@
 ## Architecture rules (never break these)
 - ALL prompts live in lib/prompts.ts ONLY — never inline a prompt elsewhere
 - ALL AI provider calls go through lib/ai/ ONLY. The registry in lib/ai/index.ts
-  has exactly ONE provider: Google Gemini. There is no Anthropic/Claude provider
-  despite the project name — if you add one, update the privacy policy in the
-  same change, because it names the data processor.
+  has exactly ONE provider: Anthropic Claude (claude-haiku-4-5-20251001), per
+  ADR-22 — it replaced Google Gemini, it did not join it. If you ever change the
+  provider again, update the privacy policy, the /privacy page and MissionSection
+  in the SAME change, because all three name the data processor to the user, and
+  update lib/logger.ts's secret-redaction pattern, because it matches the
+  credential's shape.
 - ALL TypeScript types live in types/index.ts ONLY
 - ALL localStorage operations go through lib/history.ts ONLY
 - API routes live in app/api/ ONLY — never call a model from a client component

@@ -41,7 +41,7 @@ CV text + Opportunity text (job description OR scholarship criteria)
 sanitizeText()  [preserved, unchanged — lib/validators.ts]
         │
         ▼
-STAGE 1 — Structured Claim Extraction  (1 Gemini call, schema-constrained)
+STAGE 1 — Structured Claim Extraction  (1 Anthropic Claude call, schema-bound via forced tool use)
    Output: score, band-verdict, per-requirement RequirementClaim[],
            ats_checks (structural, see §11.3), salary, interview questions
         │
@@ -54,7 +54,7 @@ STAGE 2 — Deterministic Verification   (pure function, no model call, no netwo
         ▼
 STAGE 2b — Adjudication escalation (SHOULD-HAVE, conditional)
    Only for claims Stage 2 scores as borderline (see §11.2 threshold band)
-   → 1 narrow Gemini call per borderline claim, batched into one request
+   → 1 narrow Anthropic Claude call per borderline claim, batched into one request
      ("for each of these N quote/requirement pairs, answer yes/no/partial")
         │
         ▼
@@ -79,7 +79,7 @@ This is a **deterministic, ablatable multi-stage pipeline, not an agent** — se
 # 9. AI architecture
 
 ## 9.1 What's preserved unchanged (verified strong in the source audit, do not touch)
-`lib/ai/google.ts` (retry/backoff, safety thresholds, constrained decoding, header-based key transport), `lib/ai/index.ts` (`generateJson`/`generateText`, the one-repair-attempt strategy), the nonce-delimited injection defence in `lib/prompts.ts`, `lib/errors.ts`, `lib/logger.ts`, `lib/rate-limit.ts` (extended, not replaced — §13.5), the provider-registry seam.
+`lib/ai/anthropic.ts` (retry/backoff, forced-tool-use schema binding, SDK-managed key transport; ADR-22 replaced `google.ts`, and with it the per-category safety thresholds, which Anthropic does not expose), `lib/ai/index.ts` (`generateJson`/`generateText`, the one-repair-attempt strategy), the nonce-delimited injection defence in `lib/prompts.ts`, `lib/errors.ts`, `lib/logger.ts`, `lib/rate-limit.ts` (extended, not replaced — §13.5), the provider-registry seam.
 
 ## 9.2 What changes
 `lib/analysis/schemas.ts`: the flat `skills_matched`/`skills_missing`/`skills_extra`/`keywords_present`/`keywords_missing` string arrays and the six sub-score numbers and `verdict_note` are **removed** from the schema (all five confirmed dead-or-fake-precision in the research audit and in this plan's own analysis — §16). Replaced by a single `claims: RequirementClaim[]` array. `verdict`/`score` are **kept** — the interpretive judgment stays, because users need one legible headline number, but it is now always shown paired with the mechanically-computed `evidence_coverage`, never alone (§19).
@@ -95,7 +95,7 @@ No new dependency (six production dependencies today; this does not add a sevent
 4. `evidence_quote: null` (model asserted no supporting text exists) is recorded directly as `unresolved`, skipping matching — this is the honest "gap" case, distinct from "the model claimed a quote and it wasn't found" (also `unresolved`, but flagged internally as `hallucination_candidate: true` for research-mode/eval purposes only, never surfaced to end users as an accusation).
 
 ## 9.5 Stage 2b — adjudication escalation (SHOULD-HAVE)
-Batches all `uncertain`-tier claims from one analysis into a single additional Gemini call (not one call per claim — cost control), asking a yes/no/partial verdict per pair, schema-constrained. If disabled (env flag, default **off** for the MVP thesis build to keep the core claim clean — see research audit §13 ablations), all `uncertain` claims simply stay `uncertain` in the UI, which is itself an honest and acceptable end state, not a bug.
+Batches all `uncertain`-tier claims from one analysis into a single additional Anthropic Claude call (not one call per claim — cost control), asking a yes/no/partial verdict per pair, schema-constrained. If disabled (env flag, default **off** for the MVP thesis build to keep the core claim clean — see research audit §13 ablations), all `uncertain` claims simply stay `uncertain` in the UI, which is itself an honest and acceptable end state, not a bug.
 
 ## 9.6 ATS checks become partially self-verifying
 Of the 8 ATS checks, at least three are mechanically checkable without trusting the model at all: consistent date format (regex pattern-consistency check across detected dates), contact details present in the body (regex for email/phone patterns), no tables/multi-column markers (heuristic on extracted-text line structure — best-effort, since PDF layout information is mostly lost at extraction; documented as a known limitation, not oversold). These three run as an additional deterministic check inside Stage 2, and their `status` is only trusted from the model when the deterministic check is inconclusive. This is a SHOULD-HAVE refinement, not required for the core thesis claim, but cheap and directly reinforces the "evidence over assertion" doctrine everywhere it's feasible.
@@ -358,7 +358,7 @@ Baselines, metrics, hypotheses, and the three experiments are not restated in fu
 
 # 18. Reproducibility
 
-Every experimental run records: the exact `GOOGLE_MODEL` string (already the single override point via `getGoogleModel()` — reused, not duplicated), `temperature: 0` (already the pipeline default) with the number of independent runs averaged noted explicitly (Gemini determinism at temperature 0 is not guaranteed), the exact prompt text as committed in `lib/prompts.ts` at that commit hash, the dataset version (a simple version string in `research/dataset/`), and raw per-item model output alongside aggregated metrics (so a reviewer can re-score by hand). `research/scripts/evaluate.ts` and siblings are themselves tested code (§20), not one-off notebooks.
+Every experimental run records: the exact `ANTHROPIC_MODEL` string (already the single override point via `getAnthropicModel()` — reused, not duplicated), `temperature: 0` (already the pipeline default) with the number of independent runs averaged noted explicitly (Claude's determinism at temperature 0 is not guaranteed either — the same caveat that applied to Gemini, unchanged by ADR-22), the exact prompt text as committed in `lib/prompts.ts` at that commit hash, the dataset version (a simple version string in `research/dataset/`), and raw per-item model output alongside aggregated metrics (so a reviewer can re-score by hand). `research/scripts/evaluate.ts` and siblings are themselves tested code (§20), not one-off notebooks.
 
 ---
 
@@ -397,13 +397,13 @@ Fully specified in the research audit §17 and §20 (14-chapter structure, 25-qu
 # 23. MUST / SHOULD / NICE / DO-NOT-BUILD
 
 **MUST HAVE**
-Valid `GOOGLE_API_KEY` and one verified real end-to-end run · Stage 1 claim-extraction schema + prompts · Stage 2 deterministic verification module (`lib/analysis/grounding.ts`) · `AnalysisResult` restructure (§11.1) · removal of the six fake sub-scores and `verdict_note` · new colour semantic contract (§13.2) retiring red-as-judgment · marked-document evidence UI (§14.1) · `Hallmark` accessible text · `MotionConfig` · nested-`<main>` fixes · `error.tsx` prop fix · dataset construction (60–150 items) + annotation guidelines · baseline scripts (keyword, embedding) · Experiment 1 harness (faithfulness/hallucination) · Experiment 3 harness (ablation on/off) · reproducibility logging · hourly rate cap.
+Valid `ANTHROPIC_API_KEY` and one verified real end-to-end run · Stage 1 claim-extraction schema + prompts · Stage 2 deterministic verification module (`lib/analysis/grounding.ts`) · `AnalysisResult` restructure (§11.1) · removal of the six fake sub-scores and `verdict_note` · new colour semantic contract (§13.2) retiring red-as-judgment · marked-document evidence UI (§14.1) · `Hallmark` accessible text · `MotionConfig` · nested-`<main>` fixes · `error.tsx` prop fix · dataset construction (60–150 items) + annotation guidelines · baseline scripts (keyword, embedding) · Experiment 1 harness (faithfulness/hallucination) · Experiment 3 harness (ablation on/off) · reproducibility logging · hourly rate cap.
 
 **SHOULD HAVE**
 Stage 2b adjudication escalation · ATS mechanical sub-checks (§9.6) · research-mode header flag · Experiment 2 (fairness perturbation) · share-card rewrite · `CoverLetterTab` retry · mobile responsive pass across all result components · sitemap/robots/JSON-LD · gap-conditioned rewrite/interview prompts · `?deep=1` health check.
 
 **NICE TO HAVE**
-Skill-ontology/ESCO normalization · cross-model (non-Gemini) comparison · chat endpoint given claim context · confidence detail beyond the three-tier label in the UI (e.g., an expandable "why uncertain" note) · CSP nonce middleware.
+Skill-ontology/ESCO normalization · cross-model (non-Claude) comparison · chat endpoint given claim context · confidence detail beyond the three-tier label in the UI (e.g., an expandable "why uncertain" note) · CSP nonce middleware.
 
 **DO NOT BUILD**
 Autonomous/multi-agent architecture · RAG or vector database · accounts/auth/server-side database · analytics or user telemetry of any kind · acquisition of a large real-resume dataset · model fine-tuning · a fragmented `docs/` folder tree · a second, competing prose specification of the research design (the audit document is authoritative for science; this document is authoritative for system design — nothing else should attempt either job).
@@ -412,7 +412,7 @@ Autonomous/multi-agent architecture · RAG or vector database · accounts/auth/s
 
 # 24. Risks, threats to validity, assumptions
 
-**Risks:** the deterministic fuzzy-matcher's threshold (0.85/0.55, §9.4) is a judgment call that needs calibration against the labeled dataset before Experiment 1 is trusted — treat the first dataset pass as a threshold-calibration exercise, not a final result. Stage 2b, if enabled, reintroduces a small amount of LLM-side non-determinism into what is otherwise a fully deterministic verification stage — keep it optional and always report results with it explicitly on or off, never mixed. **Threats to validity:** synthetic-dataset realism, single-model (Gemini-only) evaluation, small sample size — all restated from the research audit and not reduced by anything in this plan; this plan makes the experiments buildable, it doesn't make the sample bigger. **Assumptions:** a valid `GOOGLE_API_KEY` will be supplied before Phase 2 of the kickoff doc begins; the student performs (or arranges) the second labeler pass needed for inter-rater reliability; university formatting/citation requirements for the thesis chapters are out of this document's scope and must be layered on by the student.
+**Risks:** the deterministic fuzzy-matcher's threshold (0.85/0.55, §9.4) is a judgment call that needs calibration against the labeled dataset before Experiment 1 is trusted — treat the first dataset pass as a threshold-calibration exercise, not a final result. Stage 2b, if enabled, reintroduces a small amount of LLM-side non-determinism into what is otherwise a fully deterministic verification stage — keep it optional and always report results with it explicitly on or off, never mixed. **Threats to validity:** synthetic-dataset realism, single-model (Claude-Haiku-4.5-only) evaluation, small sample size — all restated from the research audit and not reduced by anything in this plan; this plan makes the experiments buildable, it doesn't make the sample bigger. **Assumptions:** a valid `GOOGLE_API_KEY` will be supplied before Phase 2 of the kickoff doc begins; the student performs (or arranges) the second labeler pass needed for inter-rater reliability; university formatting/citation requirements for the thesis chapters are out of this document's scope and must be layered on by the student.
 
 ---
 

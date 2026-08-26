@@ -1,5 +1,7 @@
 # Final Pre-Coding Audit
 
+> **Provider note (26 August 2026).** This is a dated snapshot, preserved as written. It describes the pipeline while Google Gemini (`gemini-2.5-flash`) was the LLM provider. ADR-22 has since replaced it with Anthropic Claude (`claude-haiku-4-5-20251001`), and ADR-23 replaced the research embedding baseline with Voyage AI. Gemini references below were accurate when written and are **not** current — see `ARCHITECTURAL_DECISION_REGISTER.md`. They are left in place because rewriting a dated audit to match today's architecture would falsify the record it exists to be.
+
 Synthesis of all 27 planning documents produced in this pass, plus the three prior deliverables (`CAREERLENS_MASTER_RESEARCH_AUDIT.md`, `CAREERLENS_FINAL_MASTER_PLAN.md`, `CLAUDE_CODE_FINAL_KICKOFF.md`). This document performs the 10 required cross-checks and states the executive verdict. No application code has been written or modified in producing this document or any of the 27 it synthesizes.
 
 ## Executive verdict

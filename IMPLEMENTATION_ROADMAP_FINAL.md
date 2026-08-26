@@ -12,7 +12,7 @@ Consolidates and sequences every step from `MIGRATION_PLAN_FINAL.md` into phases
 `grounding.ts`, `aggregate.ts` built and unit-tested against fixtures (`TESTING_STRATEGY_FINAL.md`'s full adversarial suite) before wiring into the live pipeline. **Exit criteria:** verifier suite passing, including every named adversarial case, before Phase 3 begins — this ordering is deliberate, since a verifier bug caught after UI wiring is more expensive to trace than one caught in isolation.
 
 ## Phase 3 — Pipeline wiring (maps to Kickoff Phase C)
-`/api/analyze` updated to the fixed guard-validate → normalize → verify → aggregate → respond order. `prompts.ts` updated per `PROMPT_ARCHITECTURE_FINAL.md`. **Exit criteria:** integration tests (mocked `generateJson`) passing; a manual live-key smoke test recommended but not required to pass this gate, since live-key testing depends on the human populating `GOOGLE_API_KEY`.
+`/api/analyze` updated to the fixed guard-validate → normalize → verify → aggregate → respond order. `prompts.ts` updated per `PROMPT_ARCHITECTURE_FINAL.md`. **Exit criteria:** integration tests (mocked `generateJson`) passing; a manual live-key smoke test recommended but not required to pass this gate, since live-key testing depends on the human populating `ANTHROPIC_API_KEY`.
 
 ## Phase 4 — Design tokens (parallelizable with Phase 1–3)
 `--unresolved`/`--unresolved-text` added to `globals.css`. **Exit criteria:** tokens present, unused until Phase 5 consumes them — safe to land any time.

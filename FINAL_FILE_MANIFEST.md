@@ -52,7 +52,7 @@ Career_Lense_AI/
 │   │   │   ├── scoring.ts                               [MODIFIED — sole source of truth for bands]
 │   │   │   ├── share-card.ts                             [MODIFIED — dial/bar-chart drawing removed]
 │   │   │   ├── ai/
-│   │   │   │   ├── google.ts                             [UNCHANGED]
+│   │   │   │   ├── anthropic.ts                          [REPLACES google.ts — ADR-22]
 │   │   │   │   ├── index.ts                                [UNCHANGED]
 │   │   │   │   └── guards.ts                                 [MODIFIED — new schema validators]
 │   │   │   └── analysis/

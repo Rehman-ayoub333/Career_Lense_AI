@@ -1,5 +1,7 @@
 # CareerLens AI — QA Report
 
+> **Provider note (26 August 2026).** This is a dated snapshot, preserved as written. It describes the pipeline while Google Gemini (`gemini-2.5-flash`) was the LLM provider. ADR-22 has since replaced it with Anthropic Claude (`claude-haiku-4-5-20251001`), and ADR-23 replaced the research embedding baseline with Voyage AI. Gemini references below were accurate on the date above and are **not** current — see `ARCHITECTURAL_DECISION_REGISTER.md`. They are left in place because rewriting a dated audit to match today's architecture would falsify the record it exists to be.
+
 **Date:** 31 July 2026
 **Build tested:** production (`next build` + `next start`), Next.js 16.2.12
 **Environment:** Chrome via automation, viewport 1254–1536px wide

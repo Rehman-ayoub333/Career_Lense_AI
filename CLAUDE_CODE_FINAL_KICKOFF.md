@@ -18,7 +18,7 @@
 **Goal:** confirm the repository is in the state both planning documents assume before touching anything.
 
 **Tasks:**
-- Confirm `GOOGLE_API_KEY` resolves to a real, working key (`GET /api/health` returns `ready: true` AND a real `POST /api/analyze` call against the demo CV/JD succeeds end to end — the health check alone is not sufficient, per the known gap in Master Plan §12.2).
+- Confirm `ANTHROPIC_API_KEY` resolves to a real, working key (`GET /api/health` returns `ready: true` AND a real `POST /api/analyze` call against the demo CV/JD succeeds end to end — the health check alone is not sufficient, per the known gap in Master Plan §12.2).
 - If no working key is available: **STOP here.** Report this plainly and do not proceed to Phase B. Every later phase depends on being able to run real analyses against the new pipeline.
 - Run `npm run verify` from `careerlens/` and confirm it's green on the current `main`, matching the state recorded in the research audit.
 

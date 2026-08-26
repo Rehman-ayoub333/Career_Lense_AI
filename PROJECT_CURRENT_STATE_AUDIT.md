@@ -1,4 +1,8 @@
 # Project Current State Audit
+
+> **Provider note (26 August 2026).** This is a dated snapshot, preserved as written. It describes the pipeline while Google Gemini (`gemini-2.5-flash`) was the LLM provider. ADR-22 has since replaced it with Anthropic Claude (`claude-haiku-4-5-20251001`), and ADR-23 replaced the research embedding baseline with Voyage AI. Gemini references below were accurate when written and are **not** current — see `ARCHITECTURAL_DECISION_REGISTER.md`. They are left in place because rewriting a dated audit to match today's architecture would falsify the record it exists to be.
+>
+> One open item this audit raised is now answered: §"`JsonSchema`'s actual nullable support must be checked" — Anthropic's strict-mode schema subset **does** support a true nullable via `anyOf`, unlike Gemini's `responseSchema`. It was deliberately not adopted during the swap; the reasoning is in `ADR_10_NULLABLE_INVESTIGATION.md`.
 Re-verified against the live repository at the start of this planning pass. Nothing has changed on disk since the prior audits (`PROJECT_STATE_REPORT.md`, `CAREERLENS_MASTER_RESEARCH_AUDIT.md`, `CAREERLENS_FINAL_MASTER_PLAN.md`) except that those three documents and `CLAUDE_CODE_FINAL_KICKOFF.md` now exist at the repo root — confirmed via a fresh directory listing and a full re-read of `app/globals.css`. **No application code has been implemented.** This document is the single current-state reference for everything that follows in this planning pass; where it repeats the earlier audits, that's deliberate — this pass must not silently drift from what was already verified.
 
 ## 1. Current architecture

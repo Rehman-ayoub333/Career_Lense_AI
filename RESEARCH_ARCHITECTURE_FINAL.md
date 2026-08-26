@@ -32,7 +32,7 @@ research/
 Every script: (1) loads a pinned dataset version, (2) records its run configuration before executing anything, (3) writes raw per-item output before writing any aggregate, (4) computes aggregates as a separate, re-runnable step over the raw output (so re-scoring with a different metric formula doesn't require re-calling the API). This ordering exists specifically so a partial run (e.g., the API times out on item 40 of 100) leaves usable raw data for items 1–39, rather than losing the whole run.
 
 ## Reproducibility
-Every `config.json` records: exact `GOOGLE_MODEL` string, `temperature` (0, the pipeline default), number of independent runs per item (to average over Gemini's non-guaranteed determinism at temperature 0), dataset version string, and the git commit hash of `careerlens/` at run time (so a later reader can check out the exact prompt/schema version that produced a given result set). Full detail in `RESEARCH_EVALUATION_FINAL.md`.
+Every `config.json` records: exact `ANTHROPIC_MODEL` string (ADR-22; `claude-haiku-4-5-20251001` by default) and, when the embedding baseline runs, the `VOYAGE_MODEL` string (ADR-23), `temperature` (0, the pipeline default), number of independent runs per item (to average over the model's non-guaranteed determinism at temperature 0), dataset version string, and the git commit hash of `careerlens/` at run time (so a later reader can check out the exact prompt/schema version that produced a given result set). Full detail in `RESEARCH_EVALUATION_FINAL.md`.
 
 ## Result storage
 Flat files (`JSON`/`JSONL`), not a database — consistent with the whole project's zero-infrastructure philosophy, and appropriate at this scale (hundreds of items, not millions).

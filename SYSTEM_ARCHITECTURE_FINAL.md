@@ -9,7 +9,7 @@ API (POST /api/analyze — the only route in this data flow; enhancements are se
  ↓
 Document Processing (sanitizeText — control/zero-width/bidi stripping, HTML-tag stripping; pdf.ts for uploads)
  ↓
-Analysis Pipeline Stage 1 — Claim + Evidence Generation (one Gemini call, schema-constrained)
+Analysis Pipeline Stage 1 — Claim + Evidence Generation (one Anthropic Claude call, schema-bound via forced tool use)
  ↓
 Deterministic Evidence Verification (Stage 2 — pure function, no network, no model call)
  ↓

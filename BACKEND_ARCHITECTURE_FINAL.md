@@ -6,7 +6,7 @@ app/api/{analyze,rewrite,cover-letter,chat,upload,health}/route.ts   — routes,
 lib/api/route.ts            — createApiRoute: rate limit, abort budget, serialisation, logging
 lib/api/contract.ts          — wire types
 lib/api/client.ts            — the one client-side fetch door
-lib/ai/{index,google,json,types}.ts — provider registry + transport, unchanged
+lib/ai/{index,anthropic,json,types}.ts — provider registry + transport (ADR-22: `google.ts` → `anthropic.ts`; registry seam unchanged)
 lib/analysis/{schemas,guards,constants,ats-tips}.ts — restructured per DATA_CONTRACTS_FINAL.md
 lib/analysis/grounding.ts    — NEW, Stage 2/3, pure functions
 lib/prompts.ts               — rewritten prompt bodies, unchanged injection-defence mechanism
@@ -19,7 +19,7 @@ lib/{errors,logger,rate-limit,validators,history,export,share-card,scoring,forma
 ## Services / modules — exact responsibilities
 | Module | Owns | Does NOT own |
 |---|---|---|
-| `lib/ai/*` | Transport to Gemini, retries, safety settings, constrained decoding | Any judgment about claim correctness |
+| `lib/ai/*` | Transport to Anthropic, retries, forced-tool-use schema binding | Any judgment about claim correctness |
 | `lib/analysis/schemas.ts` | What shape Stage 1 is constrained to produce | Whether that shape is *true* |
 | `lib/analysis/guards.ts` | Runtime validation that the shape is well-formed (types, required fields, no empty-string quote masquerading as evidence) | Fuzzy-matching evidence against source text |
 | `lib/analysis/grounding.ts` | Fuzzy-matching evidence against source text, tier assignment, coverage aggregation | Any network call, any model call |
@@ -33,7 +33,7 @@ Unchanged mechanism (`sanitizeText`, boundary validation in `guards.ts`), extend
 Unchanged 10-code taxonomy (`lib/errors.ts`), `publicMessage`-only serialization (unchanged structural guarantee). No new error codes required — the grounding stage cannot itself fail in a way that needs a new code, since it's a pure function with defined behaviour on every input (including malformed-but-guard-passed edge cases, per `EVIDENCE_VERIFICATION_SPEC.md`).
 
 ## AI provider boundary
-Unchanged: `lib/ai/index.ts` is the only caller of `lib/ai/google.ts`; the provider registry seam (`PROVIDERS: Record<string, AiProvider>`) is preserved exactly, so adding a second provider remains a one-file change. `grounding.ts` is explicitly outside this boundary — it never imports from `lib/ai/*`, by design, since it must remain callable and testable without any provider configured at all.
+Unchanged in shape: `lib/ai/index.ts` is the only caller of `lib/ai/anthropic.ts` (ADR-22 replaced `google.ts` through this seam, which is what let the swap touch no call site); the provider registry seam (`PROVIDERS: Record<string, AiProvider>`) is preserved exactly, so adding a second provider remains a one-file change. `grounding.ts` is explicitly outside this boundary — it never imports from `lib/ai/*`, by design, since it must remain callable and testable without any provider configured at all.
 
 ## Document processing
 Unchanged (`lib/pdf.ts`, `lib/validators.ts`).
