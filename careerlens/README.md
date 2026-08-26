@@ -28,7 +28,7 @@ Free, no-signup AI-powered CV analyzer that gives you a match score, ATS compati
 | Language | TypeScript (strict mode) |
 | Styling | Tailwind CSS 4 + CSS variables |
 | Animations | Framer Motion |
-| AI | Google Gemini (gemini-2.5-flash) |
+| AI | Anthropic Claude (claude-haiku-4-5-20251001) |
 | PDF Parsing | pdf-parse v2 |
 | Icons | Lucide React |
 | Deployment | Vercel |
@@ -61,7 +61,7 @@ src/
 ### AI Pipeline
 
 1. User submits CV + JD → validated and sanitized server-side
-2. `/api/analyze` calls Gemini with structured JSON schema enforcement
+2. `/api/analyze` calls Claude with schema enforcement via forced tool use
 3. `/api/rewrite` + `/api/cover-letter` run in parallel (independent of analysis)
 4. JSON responses are validated with type guards before reaching the client
 5. Failed JSON parse triggers one automatic retry with a stricter fallback prompt
@@ -71,7 +71,7 @@ src/
 
 - **Landing and application are separate routes** — `/` sells and never asks for a CV; `/analyze` is the tool. They shared a route until the two jobs started fighting: the page had to unmount its marketing sections when results arrived, restore scroll across the swap, and publish its state to a module-level store so the navbar could tell whether the anchors it linked to still existed. Splitting the routes deleted all three mechanisms, and made the landing page a server component again.
 - **No database** — localStorage for history, in-memory rate limiting. Zero infrastructure cost.
-- **Swappable AI provider** — one `AiProvider` interface in `lib/ai/`, registered in `lib/ai/index.ts`. Google Gemini is the only provider today; adding a vendor touches no call site or route.
+- **Swappable AI provider** — one `AiProvider` interface in `lib/ai/`, registered in `lib/ai/index.ts`. Anthropic Claude is the only provider today; ADR-22 swapped it in for Google Gemini through this seam, touching no call site or route, which is the evidence the seam works.
 - **Shared rate limit** — Single bucket per IP across all AI endpoints prevents self-blocking.
 - **Client-side share cards** — Canvas API generates PNG score cards without server-side image deps.
 - **Scholarship-aware prompts** — Separate prompt templates for job vs. scholarship evaluation.
@@ -98,17 +98,17 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GOOGLE_API_KEY` | Yes | Google AI Studio key. Create one free at [aistudio.google.com/apikey](https://aistudio.google.com/apikey). |
-| `GEMINI_API_KEY` | No | Legacy alias for `GOOGLE_API_KEY`, accepted so existing deployments keep working. |
-| `GOOGLE_MODEL` | No | Model override. Defaults to `gemini-2.5-flash`. |
-| `AI_PROVIDER` | No | Active provider. Only `google` ships today. |
+| `ANTHROPIC_API_KEY` | Yes | Anthropic API key. Create one at [console.anthropic.com](https://console.anthropic.com/settings/keys). |
+| `VOYAGE_API_KEY` | No | Voyage AI key, for the `research/` embedding baseline only (ADR-23). The app never reads it. |
+| `ANTHROPIC_MODEL` | No | Model override. Defaults to `claude-haiku-4-5-20251001`. |
+| `AI_PROVIDER` | No | Active provider. Only `anthropic` ships today. |
 | `NEXT_PUBLIC_SITE_URL` | No | Canonical origin. Detected automatically on Vercel. |
 
-`GOOGLE_API_KEY` is the only variable the app needs to run. See `.env.example`.
+`ANTHROPIC_API_KEY` is the only variable the app needs to run. See `.env.example`.
 
 > **Note:** `ANTHROPIC_API_KEY` is **not** read by this application. If you have one
 > in `.env.local` from an earlier revision, it does nothing — the app will still
-> fail until a valid `GOOGLE_API_KEY` is set.
+> fail until a valid `ANTHROPIC_API_KEY` is set.
 
 ## Deployment
 

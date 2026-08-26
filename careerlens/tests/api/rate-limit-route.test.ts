@@ -21,9 +21,9 @@ import type { AiRequest, AiResponse } from '@/lib/ai/types'
 
 const generate = jest.fn<Promise<AiResponse>, [AiRequest]>()
 
-jest.mock('@/lib/ai/google', () => ({
-  googleProvider: {
-    id: 'google',
+jest.mock('@/lib/ai/anthropic', () => ({
+  anthropicProvider: {
+    id: 'anthropic',
     isConfigured: () => true,
     generate: (request: AiRequest) => generate(request),
   },
@@ -102,7 +102,7 @@ beforeEach(() => {
   generate.mockResolvedValue({
     text: 'A reply long enough to clear the cover-letter floor. '.repeat(8),
     usage: { inputTokens: 10, outputTokens: 20 },
-    model: 'gemini-test',
+    model: 'claude-test',
   })
 })
 

@@ -22,8 +22,21 @@ export type LogContext = Record<string, unknown>
 /** Values whose keys match these are replaced before anything is written. */
 const REDACTED_KEY = /(key|token|secret|password|authorization|cookie|apikey)/i
 
-/** Anything shaped like a Google API key, in case one reaches a message body. */
-const SECRET_PATTERN = /\bAIza[0-9A-Za-z_-]{10,}\b/g
+/**
+ * Anything shaped like a provider credential, in case one reaches a message body.
+ *
+ * Updated with the provider (ADR-22/23). This previously matched only Google's
+ * `AIza…` shape, which after the swap would have matched nothing this app can
+ * hold — an Anthropic key in a log body would have gone out unredacted. Keyed on
+ * shape rather than on a variable name because the point is to catch a key that
+ * arrived somewhere it was never named.
+ *
+ *   `sk-ant-…`  Anthropic  (ANTHROPIC_API_KEY)
+ *   `pa-…`      Voyage AI  (VOYAGE_API_KEY, research/ only — matched anyway,
+ *               since redacting a key that cannot appear costs nothing and the
+ *               reverse is a leak)
+ */
+const SECRET_PATTERN = /\b(?:sk-ant-[0-9A-Za-z_-]{10,}|pa-[0-9A-Za-z_-]{20,})\b/g
 
 function redact(value: unknown, depth = 0): unknown {
   if (depth > 4) return '[truncated]'

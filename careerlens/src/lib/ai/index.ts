@@ -3,7 +3,7 @@ import { AppError, toAppError } from '@/lib/errors'
 import { logger } from '@/lib/logger'
 import { getJsonRepairPrompt } from '@/lib/prompts'
 
-import { googleProvider } from './google'
+import { anthropicProvider } from './anthropic'
 import { parseModelJson } from './json'
 import type { AiProvider, JsonSchema } from './types'
 
@@ -12,11 +12,17 @@ export type { AiProvider, AiRequest, AiResponse, JsonSchema } from './types'
 /**
  * Provider registry.
  *
- * Google ships today. Adding a vendor is: write a module satisfying `AiProvider`,
- * add one entry here, set `AI_PROVIDER`. No call site changes, no route changes.
+ * Anthropic ships today. Adding a vendor is: write a module satisfying
+ * `AiProvider`, add one entry here, set `AI_PROVIDER`. No call site changes, no
+ * route changes.
+ *
+ * ADR-22 used that seam to *replace* the single entry rather than add a second:
+ * Google Gemini was here until the swap, and the fact that nothing outside this
+ * directory and `lib/prompts.ts` had to change is the evidence that ADR-03's
+ * provider-agnostic boundary held.
  */
 const PROVIDERS: Record<string, AiProvider> = {
-  google: googleProvider,
+  anthropic: anthropicProvider,
 }
 
 export function getProvider(): AiProvider {
@@ -31,7 +37,7 @@ export function getProvider(): AiProvider {
 
   if (!provider.isConfigured()) {
     throw new AppError('CONFIG_ERROR', {
-      detail: `Provider "${id}" is missing its credentials. Set GOOGLE_API_KEY.`,
+      detail: `Provider "${id}" is missing its credentials. Set ANTHROPIC_API_KEY.`,
     })
   }
 

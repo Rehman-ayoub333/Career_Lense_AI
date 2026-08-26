@@ -65,9 +65,18 @@ const atsCheck: JsonSchema = {
  *
  * The canonical type is `string | null`. `JsonSchema` in `lib/ai/types.ts` has no
  * way to express a nullable field — its variants carry a single concrete `type`
- * and no `nullable` flag — so the constrained decoder cannot be asked for `null`
- * here without widening the provider contract and the Gemini request builder that
- * consumes it, both of which are explicitly out of scope.
+ * and no `nullable` flag — so the provider cannot be asked for `null` here
+ * without widening the provider contract and the request builder that consumes
+ * it, both of which are explicitly out of scope.
+ *
+ * **Note, post-ADR-22.** The original reason this was impossible was a Gemini
+ * limitation: `responseSchema` had no nullable or union form. Anthropic's strict
+ * mode *does* — `{"anyOf": [{"type": "string"}, {"type": "null"}]}` — so the
+ * sentinel now survives as a workaround for a constraint that no longer exists.
+ * It was deliberately not removed during the provider swap, because doing so is a
+ * cross-cutting change to `JsonSchema`, this file, `guards.ts` and its tests, not
+ * a clean find. See `ADR_10_NULLABLE_INVESTIGATION.md` for the full reasoning and
+ * the recommendation to revisit it as its own change after the live-key run.
  *
  * The documented fallback is therefore taken: the model emits an empty string to
  * mean "no evidence offered", and `guards.ts` coerces `""` to `null` at the

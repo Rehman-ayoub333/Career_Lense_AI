@@ -31,9 +31,9 @@ import type { AnalysisDraft } from '@/types'
 
 const generate = jest.fn<Promise<AiResponse>, [AiRequest]>()
 
-jest.mock('@/lib/ai/google', () => ({
-  googleProvider: {
-    id: 'google',
+jest.mock('@/lib/ai/anthropic', () => ({
+  anthropicProvider: {
+    id: 'anthropic',
     isConfigured: () => true,
     generate: (request: AiRequest) => generate(request),
   },
@@ -133,7 +133,7 @@ beforeEach(() => {
   generate.mockResolvedValue({
     text: JSON.stringify(draft()),
     usage: { inputTokens: 100, outputTokens: 200 },
-    model: 'gemini-test',
+    model: 'claude-test',
   })
 })
 
@@ -185,7 +185,7 @@ describe('the live /api/analyze response carries no flat skills list', () => {
     generate.mockResolvedValue({
       text: JSON.stringify({ ...draft(), skills_missing: ['Docker', 'Kubernetes'] }),
       usage: { inputTokens: 100, outputTokens: 200 },
-      model: 'gemini-test',
+      model: 'claude-test',
     })
 
     const response = await POST(analyzeRequest())

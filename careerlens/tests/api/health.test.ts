@@ -14,9 +14,9 @@
 const generate = jest.fn()
 const isConfigured = jest.fn<boolean, []>()
 
-jest.mock('@/lib/ai/google', () => ({
-  googleProvider: {
-    id: 'google',
+jest.mock('@/lib/ai/anthropic', () => ({
+  anthropicProvider: {
+    id: 'anthropic',
     isConfigured: () => isConfigured(),
     generate,
   },
@@ -86,13 +86,13 @@ describe('GET /api/health — degraded', () => {
   })
 
   it('SECURITY: does not disclose the provider, the variable name or the reason', async () => {
-    // `getProvider` throws with `detail: 'Provider "google" is missing its
-    // credentials. Set GOOGLE_API_KEY.'` — useful in a log, and an unauthenticated
+    // `getProvider` throws with `detail: 'Provider "anthropic" is missing its
+    // credentials. Set ANTHROPIC_API_KEY.'` — useful in a log, and an unauthenticated
     // fingerprint of the stack if it reached the body.
     const raw = JSON.stringify(await readHealth(await GET()))
 
-    expect(raw).not.toContain('google')
-    expect(raw).not.toContain('GOOGLE_API_KEY')
+    expect(raw).not.toContain('anthropic')
+    expect(raw).not.toContain('ANTHROPIC_API_KEY')
     expect(raw).not.toContain('credentials')
     expect(raw).not.toContain('CONFIG_ERROR')
   })

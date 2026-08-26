@@ -13,9 +13,9 @@ import type { RewriteResult } from '@/types'
 
 const generate = jest.fn<Promise<AiResponse>, [AiRequest]>()
 
-jest.mock('@/lib/ai/google', () => ({
-  googleProvider: {
-    id: 'google',
+jest.mock('@/lib/ai/anthropic', () => ({
+  anthropicProvider: {
+    id: 'anthropic',
     isConfigured: () => true,
     generate: (request: AiRequest) => generate(request),
   },
@@ -70,7 +70,7 @@ beforeEach(() => {
   generate.mockResolvedValue({
     text: JSON.stringify(REWRITE),
     usage: { inputTokens: 10, outputTokens: 20 },
-    model: 'gemini-test',
+    model: 'claude-test',
   })
 })
 

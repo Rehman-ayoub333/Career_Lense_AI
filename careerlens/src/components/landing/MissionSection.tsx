@@ -11,8 +11,10 @@ import { Section } from './Section'
  * The terms, stated plainly.
  *
  * Three positions, each a fact rather than a promise, and each checkable. The
- * data-handling statement names the processor — Google's Gemini API — because a
- * privacy claim that says "our AI provider" is not a claim at all.
+ * data-handling statement names the processor — Anthropic's Claude API — because
+ * a privacy claim that says "our AI provider" is not a claim at all. It named
+ * Google's Gemini API until ADR-22; if the provider ever changes again, this
+ * string, `/privacy` and `SECURITY_PRIVACY_SPEC.md` change in the same commit.
  *
  * No conditional constructions appear here. A product that says it *may* retain
  * something is a product that does.
@@ -25,7 +27,7 @@ const POSITIONS: readonly { heading: string; body: string }[] = [
   },
   {
     heading: 'Nothing is stored',
-    body: 'Your CV and the requirement are sent to Google’s Gemini API for the analysis and are not retained by this product afterwards. There is no database. Your history is kept in your own browser and clearing it removes it.',
+    body: 'Your CV and the requirement are sent to Anthropic’s Claude API for the analysis and are not retained by this product afterwards. There is no database. Your history is kept in your own browser and clearing it removes it.',
   },
   {
     heading: 'The working is public',

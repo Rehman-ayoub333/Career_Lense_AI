@@ -22,27 +22,32 @@ function read(name: string): string | undefined {
 }
 
 /**
- * Google AI Studio API key.
+ * Anthropic API key (ADR-22).
  *
- * `GOOGLE_API_KEY` is the canonical name (matches Google's own SDK convention and
- * is the only variable required for deployment). `GEMINI_API_KEY` is accepted as a
- * legacy alias so existing deployments keep working without an env migration.
+ * `ANTHROPIC_API_KEY` is the canonical name — it matches Anthropic's own SDK
+ * convention, so the SDK would find it even if this module did not, and it is
+ * the only variable required for deployment.
+ *
+ * No legacy alias is accepted. `GOOGLE_API_KEY`/`GEMINI_API_KEY` are gone rather
+ * than tolerated: a stale Google key silently satisfying a configuration check
+ * for a provider that can no longer use it is worse than an unset variable,
+ * which fails loudly at `/api/health`.
  */
-export function getGoogleApiKey(): string | undefined {
+export function getAnthropicApiKey(): string | undefined {
   assertServerOnly()
-  return read('GOOGLE_API_KEY') ?? read('GEMINI_API_KEY')
+  return read('ANTHROPIC_API_KEY')
 }
 
 /** Model id override. Lets the model be rolled forward without a code change. */
-export function getGoogleModel(): string {
+export function getAnthropicModel(): string {
   assertServerOnly()
-  return read('GOOGLE_MODEL') ?? 'gemini-2.5-flash'
+  return read('ANTHROPIC_MODEL') ?? 'claude-haiku-4-5-20251001'
 }
 
-/** Which provider the AI layer should use. Only `google` ships today. */
+/** Which provider the AI layer should use. Only `anthropic` ships today. */
 export function getAiProviderId(): string {
   assertServerOnly()
-  return (read('AI_PROVIDER') ?? 'google').toLowerCase()
+  return (read('AI_PROVIDER') ?? 'anthropic').toLowerCase()
 }
 
 /**

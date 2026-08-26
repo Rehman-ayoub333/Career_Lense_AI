@@ -8,8 +8,13 @@
 
 /**
  * A JSON Schema subset that every major provider understands.
- * Gemini calls it `responseSchema`, OpenAI calls it `json_schema`, Anthropic
- * expresses it as a tool `input_schema` — the shape below maps onto all three.
+ * Anthropic expresses it as a tool `input_schema` (the active provider, ADR-22),
+ * Gemini called it `responseSchema`, OpenAI calls it `json_schema` — the shape
+ * below maps onto all three, which is what let the provider swap leave every
+ * schema definition in `lib/analysis/schemas.ts` untouched.
+ *
+ * It cannot express a nullable or union type. That was a Gemini constraint
+ * originally and is now a self-imposed one — see `ADR_10_NULLABLE_INVESTIGATION.md`.
  */
 export type JsonSchema =
   | { type: 'string'; description?: string; enum?: readonly string[] }

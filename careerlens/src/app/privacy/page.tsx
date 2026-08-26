@@ -38,10 +38,10 @@ export default function PrivacyPage() {
           <section>
             <h2 className="mb-2 text-base font-semibold text-text-primary">AI processing</h2>
             <p>
-              CV and job description text is sent to Google&apos;s Gemini API for analysis. Google is
-              the only third party that receives this text, and it processes the text according to
-              its own privacy policy. We do not send any identifying information — only the document
-              text you provide.
+              CV and job description text is sent to Anthropic&apos;s Claude API for analysis.
+              Anthropic is the only third party that receives this text, and it processes the text
+              according to its own privacy policy. We do not send any identifying information — only
+              the document text you provide.
             </p>
           </section>
 

@@ -13,9 +13,9 @@ import type { AnalysisDraft, AnalysisResult, ResearchAnalysisResult, VerifiedCla
 
 const generate = jest.fn<Promise<AiResponse>, [AiRequest]>()
 
-jest.mock('@/lib/ai/google', () => ({
-  googleProvider: {
-    id: 'google',
+jest.mock('@/lib/ai/anthropic', () => ({
+  anthropicProvider: {
+    id: 'anthropic',
     isConfigured: () => true,
     generate: (request: AiRequest) => generate(request),
   },
@@ -36,7 +36,7 @@ BSc Computer Science, University of the Punjab.`
 const JD = 'We need a frontend engineer with production React experience and Docker exposure.'
 
 function modelResponse(text: string): AiResponse {
-  return { text, usage: { inputTokens: 100, outputTokens: 200 }, model: 'gemini-test' }
+  return { text, usage: { inputTokens: 100, outputTokens: 200 }, model: 'claude-test' }
 }
 
 function draft(overrides: Partial<AnalysisDraft> = {}): AnalysisDraft {

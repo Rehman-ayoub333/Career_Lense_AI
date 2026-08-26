@@ -3,11 +3,11 @@ import { AppError, ERROR_CODES, toAppError } from '@/lib/errors'
 describe('AppError', () => {
   it('separates the developer message from the user message', () => {
     const error = new AppError('AI_UNAVAILABLE', {
-      detail: 'Gemini 429 for model gemini-2.5-flash: quota metric generate_content_free_tier',
+      detail: 'Anthropic 429 for model claude-haiku-4-5-20251001: rate_limit_error on organization 1234',
     })
 
-    expect(error.message).toContain('gemini-2.5-flash')
-    expect(error.publicMessage).not.toContain('gemini')
+    expect(error.message).toContain('claude-haiku-4-5-20251001')
+    expect(error.publicMessage).not.toContain('claude')
     expect(error.publicMessage).not.toContain('429')
     expect(error.publicMessage).not.toContain('quota')
   })

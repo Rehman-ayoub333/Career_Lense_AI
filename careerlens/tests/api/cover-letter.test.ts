@@ -16,9 +16,9 @@ import type { AiRequest, AiResponse } from '@/lib/ai/types'
 
 const generate = jest.fn<Promise<AiResponse>, [AiRequest]>()
 
-jest.mock('@/lib/ai/google', () => ({
-  googleProvider: {
-    id: 'google',
+jest.mock('@/lib/ai/anthropic', () => ({
+  anthropicProvider: {
+    id: 'anthropic',
     isConfigured: () => true,
     generate: (request: AiRequest) => generate(request),
   },
@@ -75,7 +75,7 @@ beforeEach(() => {
   generate.mockResolvedValue({
     text: `\n${LETTER}\n`,
     usage: { inputTokens: 200, outputTokens: 300 },
-    model: 'gemini-test',
+    model: 'claude-test',
   })
 })
 
@@ -152,7 +152,7 @@ describe('POST /api/cover-letter — SECURITY', () => {
   it('never returns the provider error detail to the caller', async () => {
     const { AppError } = jest.requireActual<typeof import('@/lib/errors')>('@/lib/errors')
     generate.mockRejectedValue(
-      new AppError('AI_UNAVAILABLE', { detail: 'project quota 998877 exhausted on gemini-2.5-flash' })
+      new AppError('AI_UNAVAILABLE', { detail: 'project quota 998877 exhausted on claude-haiku-4-5-20251001' })
     )
 
     const response = await POST(coverLetterRequest({ cvText: CV, jdText: JD }))
@@ -160,7 +160,7 @@ describe('POST /api/cover-letter — SECURITY', () => {
 
     expect(response.status).toBe(503)
     expect(raw).not.toContain('998877')
-    expect(raw).not.toContain('gemini')
+    expect(raw).not.toContain('claude')
   })
 })
 
@@ -169,7 +169,7 @@ describe('POST /api/cover-letter — the truncated-generation gate', () => {
     generate.mockResolvedValue({
       text: 'Dear hiring team, I am interested.',
       usage: { inputTokens: 200, outputTokens: 8 },
-      model: 'gemini-test',
+      model: 'claude-test',
     })
 
     const response = await POST(coverLetterRequest({ cvText: CV, jdText: JD }))
@@ -185,7 +185,7 @@ describe('POST /api/cover-letter — the truncated-generation gate', () => {
     generate.mockResolvedValue({
       text: 'Too short.',
       usage: { inputTokens: 200, outputTokens: 3 },
-      model: 'gemini-test',
+      model: 'claude-test',
     })
 
     const body = await readJson(await POST(coverLetterRequest({ cvText: CV, jdText: JD })))
