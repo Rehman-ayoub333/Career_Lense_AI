@@ -40,7 +40,34 @@ export const HISTORY_LIMIT = 10
  * above 60 000, raise `maxDuration` in the four AI routes to match.
  */
 export const AI_TIMEOUT_MS = {
-  analyze: 45_000,
+  /**
+   * 50s, raised from 45s by ADR-27.
+   *
+   * The Phase 7 live smoke test completed in 39.3s — 87% of the old budget — on
+   * an unremarkable CV/JD pair, leaving 5.7s of margin. A longer CV, a JD with
+   * more requirements, or a slow moment upstream would have crossed it, and the
+   * user would have seen AI_TIMEOUT on a request that was working.
+   *
+   * 50 rather than 60: a flat 60 would remove any gap between this app aborting
+   * cleanly and the platform killing the function mid-response, which is a worse
+   * failure because there is no controlled error to return. 10s of buffer keeps
+   * the abort ours.
+   *
+   * This is the largest output in the app and the only route whose margin has
+   * been measured against a real call. The other three are unexamined — see the
+   * note below.
+   */
+  analyze: 50_000,
+  /**
+   * Unchanged at 45s, and deliberately not raised to match `analyze`.
+   *
+   * ADR-27 is scoped to `/api/analyze` because that is the only route with a
+   * real measurement behind it. Rewrite produces 10 bullets and cover-letter a
+   * 300-word letter — both far smaller than an analysis — so there is no reason
+   * to believe they are under the same pressure, and widening a timeout on
+   * speculation costs the user latency on every failure. Raise these when a real
+   * call says they need it, not before.
+   */
   rewrite: 45_000,
   coverLetter: 45_000,
   chat: 20_000,

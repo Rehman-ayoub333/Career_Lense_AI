@@ -1,3 +1,4 @@
+import { AI_TIMEOUT_MS } from '@/lib/analysis/constants'
 import type { AiRequest, AiResponse } from '@/lib/ai/types'
 import type { AnalysisDraft, AnalysisResult, ResearchAnalysisResult, VerifiedClaim } from '@/types'
 
@@ -190,6 +191,15 @@ describe('POST /api/analyze — the happy path, end to end', () => {
   it('calls the model exactly once when the first response is valid', async () => {
     await POST(analyzeRequest())
     expect(generate).toHaveBeenCalledTimes(1)
+  })
+
+  it('ADR-27: allows 50s before aborting, with 10s of buffer under maxDuration', async () => {
+    // The live run used 39.3s of the old 45s budget on an unremarkable input.
+    // Asserted against the platform ceiling too, because the two have to move
+    // together: an abort budget at or above maxDuration means the platform kills
+    // the function before this app can return a controlled error.
+    expect(AI_TIMEOUT_MS.analyze).toBe(50_000)
+    expect(AI_TIMEOUT_MS.analyze).toBeLessThan(60_000)
   })
 
   it('ADR-25: asks for 8192 output tokens rather than inheriting the provider default', async () => {
