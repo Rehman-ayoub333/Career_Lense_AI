@@ -14,6 +14,7 @@ import {
   CLAIM_STATUSES,
   EXPECTED_COUNTS,
   MATCH_VERDICTS,
+  MAX_SALARY_TEXT_CHARS,
 } from './constants'
 
 /**
@@ -59,6 +60,27 @@ function isFiniteNumber(value: unknown): value is number {
  */
 function hasExactly(value: unknown, count: number): boolean {
   return Array.isArray(value) && value.length === count
+}
+
+/**
+ * A string that is present and under a ceiling (ADR-26).
+ *
+ * The ceiling exists because of a failure mode `strict: true` structurally
+ * cannot catch. In the Phase 7 live run the model emitted, inside the
+ * `salary_range` value, an escaped `", "salary_context": "` followed by the
+ * whole of the next field — 319 characters where a range belonged. It is a
+ * well-formed JSON string, so schema validation had nothing to object to, and
+ * the previous `typeof x === 'string'` check passed it straight through to
+ * `CompensationSummary`.
+ *
+ * Length is the one signal that separates that from a real answer without
+ * pattern-matching the specific corruption, which would be brittle and would
+ * risk mangling a legitimately wordy `salary_context`. Failing the guard routes
+ * it into `generateJson`'s existing single repair attempt — the same path every
+ * other constraint the decoder can no longer enforce already relies on.
+ */
+function isBoundedString(value: unknown, max: number): boolean {
+  return typeof value === 'string' && value.length <= max
 }
 
 /** No `source`: which mechanism decided is recorded downstream, never claimed here. */
@@ -145,8 +167,8 @@ export function isAnalysisDraft(value: unknown): value is AnalysisDraft {
     result.claims.every(isClaimDraft) &&
     hasExactly(result.ats_checks, EXPECTED_COUNTS.atsChecks) &&
     (result.ats_checks as unknown[]).every(isATSCheckDraft) &&
-    typeof result.salary_range === 'string' &&
-    typeof result.salary_context === 'string' &&
+    isBoundedString(result.salary_range, MAX_SALARY_TEXT_CHARS) &&
+    isBoundedString(result.salary_context, MAX_SALARY_TEXT_CHARS) &&
     hasExactly(result.interview_questions, EXPECTED_COUNTS.interviewQuestions) &&
     (result.interview_questions as unknown[]).every(isInterviewQuestion)
   )

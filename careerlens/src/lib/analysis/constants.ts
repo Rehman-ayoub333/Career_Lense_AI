@@ -88,6 +88,20 @@ export const SCHOLARSHIP_CLAIM_CATEGORIES = [
 
 export const CLAIM_CATEGORIES = SCHOLARSHIP_CLAIM_CATEGORIES
 
+/**
+ * Ceiling on the two free-text compensation fields (ADR-26).
+ *
+ * Not a display limit — a corruption tripwire. The Phase 7 live run returned a
+ * 319-character `salary_range` that had `", "salary_context": "…` escaped inside
+ * it: the model wrote the start of the next field into the value of this one.
+ * That is a valid JSON string, so neither `strict: true` nor a `typeof` check
+ * can see anything wrong with it, and it would have rendered as visible garbage.
+ *
+ * 200 sits well above any real salary line ("$95,000 - $120,000 USD, plus
+ * equity" is ~40) and well below the 319 that was actually observed.
+ */
+export const MAX_SALARY_TEXT_CHARS = 200
+
 /** Expected counts, asserted after generation so a short response is caught early. */
 export const EXPECTED_COUNTS = {
   keyActions: 3,

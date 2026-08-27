@@ -4,7 +4,7 @@ import {
   normalizeAnalysisDraft,
   normalizeRewriteResult,
 } from '@/lib/analysis/guards'
-import { EXPECTED_COUNTS } from '@/lib/analysis/constants'
+import { EXPECTED_COUNTS, MAX_SALARY_TEXT_CHARS } from '@/lib/analysis/constants'
 import type { AnalysisDraft, ClaimDraft } from '@/types'
 
 function claimDraft(overrides: Partial<ClaimDraft> = {}): ClaimDraft {
@@ -116,6 +116,54 @@ describe('isAnalysisDraft', () => {
       expect(isAnalysisDraft(validDraft({ key_actions: ['a', 'b'] }))).toBe(false)
       expect(isAnalysisDraft(validDraft({ key_actions: ['a', 'b', 'c', 'd'] }))).toBe(false)
       expect(isAnalysisDraft(validDraft({ key_actions: ['a', 'b', 'c'] }))).toBe(true)
+    })
+
+    /**
+     * ADR-26. The exact shape observed in the Phase 7 live run, reproduced.
+     *
+     * The model wrote the start of the *next* field into the value of this one:
+     * a 319-character `salary_range` carrying an escaped
+     * `", "salary_context": "` and then the whole of the following field. It is
+     * a well-formed JSON string, so `strict: true` had nothing to reject and the
+     * previous `typeof x === 'string'` check passed it to the UI verbatim.
+     */
+    const BLED_SALARY_RANGE =
+      'PKR 2,400,000 – 3,200,000 per annum (or USD 8,500–11,500 if international rate)", ' +
+      '"salary_context": "Senior backend engineer in Lahore with 5+ years, distributed ' +
+      'systems expertise, and transaction-scale experience commands mid-to-senior market ' +
+      'rates; Lahore-based roles typically pay 30–40% below US equivalents.'
+
+    it('rejects the observed salary field-bleed instead of passing it to the UI', () => {
+      // Sanity-check the fixture is the real thing before asserting on it: past
+      // the ceiling, and carrying the tell-tale next-field opener.
+      expect(BLED_SALARY_RANGE.length).toBeGreaterThan(MAX_SALARY_TEXT_CHARS)
+      expect(BLED_SALARY_RANGE).toContain('", "salary_context":')
+
+      expect(isAnalysisDraft(validDraft({ salary_range: BLED_SALARY_RANGE }))).toBe(false)
+    })
+
+    it('rejects the same bleed on salary_context, not just salary_range', () => {
+      // The bleed was observed on one field; nothing makes the other immune.
+      expect(isAnalysisDraft(validDraft({ salary_context: BLED_SALARY_RANGE }))).toBe(false)
+    })
+
+    it('accepts realistic salary text, which is nowhere near the ceiling', () => {
+      // The guard must not be a display limit. A real range is ~40 characters.
+      const draft = validDraft({
+        salary_range: '$95,000 - $120,000 USD, plus equity',
+        salary_context:
+          'Reflects mid-level frontend work at growth-stage companies in a major metro, ' +
+          'weighted toward the lower half of the band for a candidate without Kubernetes.',
+      })
+
+      expect(draft.salary_context.length).toBeLessThan(MAX_SALARY_TEXT_CHARS)
+      expect(isAnalysisDraft(draft)).toBe(true)
+    })
+
+    it('treats the ceiling as inclusive', () => {
+      const exact = 'x'.repeat(MAX_SALARY_TEXT_CHARS)
+      expect(isAnalysisDraft(validDraft({ salary_range: exact }))).toBe(true)
+      expect(isAnalysisDraft(validDraft({ salary_range: exact + 'x' }))).toBe(false)
     })
 
     it('reads the counts from EXPECTED_COUNTS rather than hard-coding them twice', () => {

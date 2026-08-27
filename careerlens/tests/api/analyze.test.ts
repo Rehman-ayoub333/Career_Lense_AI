@@ -428,6 +428,34 @@ describe('POST /api/analyze — failure handling', () => {
     expect(generate).toHaveBeenCalledTimes(2)
   })
 
+  it('ADR-26: repairs the observed salary field-bleed instead of rendering it', async () => {
+    // The exact shape the Phase 7 live run returned: the model wrote the start
+    // of the next field into this one's value. Well-formed JSON, so `strict:
+    // true` had nothing to reject, and before ADR-26 the type-only guard passed
+    // all 319 characters through to CompensationSummary.
+    const bled =
+      'PKR 2,400,000 – 3,200,000 per annum (or USD 8,500–11,500 if international rate)", ' +
+      '"salary_context": "Senior backend engineer in Lahore with 5+ years, distributed ' +
+      'systems expertise, and transaction-scale experience commands mid-to-senior market ' +
+      'rates; Lahore-based roles typically pay 30–40% below US equivalents.'
+
+    generate
+      .mockResolvedValueOnce(modelResponse(JSON.stringify(draft({ salary_range: bled }))))
+      .mockResolvedValueOnce(modelResponse(JSON.stringify(draft())))
+
+    const response = await POST(analyzeRequest())
+    const data = (await readJson(response)).data as AnalysisResult
+
+    // Repaired, not rejected outright and not passed through.
+    expect(response.status).toBe(200)
+    expect(generate).toHaveBeenCalledTimes(2)
+
+    // What reaches the UI is the clean second response, with no trace of the bleed.
+    expect(data.salary_range).toBe('$95,000 - $120,000 USD')
+    expect(data.salary_range).not.toContain('salary_context')
+    expect(JSON.stringify(data)).not.toContain('", "salary_context":')
+  })
+
   it('gives up with AI_INVALID_OUTPUT when the repair attempt also fails', async () => {
     generate.mockResolvedValue(modelResponse('still not JSON'))
 
