@@ -19,8 +19,40 @@ type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 
 export type LogContext = Record<string, unknown>
 
-/** Values whose keys match these are replaced before anything is written. */
-const REDACTED_KEY = /(key|token|secret|password|authorization|cookie|apikey)/i
+/**
+ * Field names whose values are replaced before anything is written.
+ *
+ * Substring matching, deliberately broad: a field called `refresh_token_v2` or
+ * `x-api-key-header` should redact, and enumerating every spelling is a losing
+ * game against a name nobody predicted.
+ *
+ * The breadth had one false positive, found during the Phase 7 live run:
+ * `inputTokens` and `outputTokens` contain "token", so the provider's usage
+ * figures were written as `[redacted]` — hiding cost attribution on every call,
+ * and hiding the exact output-token count during the very test that needed it to
+ * confirm nothing had truncated. See `NEVER_A_CREDENTIAL` below for the fix.
+ */
+const CREDENTIAL_KEY = /(key|token|secret|password|authorization|cookie|apikey)/i
+
+/**
+ * Value types that cannot be a credential, whatever the field is called.
+ *
+ * A secret is a string. A number is a count, a duration, a status code, or a
+ * token *tally* — never the token itself. Gating name-based redaction on this
+ * fixes the `inputTokens` false positive exactly, and cannot cause a leak: no
+ * credential has ever been a `number` or a `boolean`.
+ *
+ * Note what is deliberately NOT done here — the redaction rule is not reduced to
+ * value-shape matching (`sk-ant-…` / `pa-…`) alone. That would drop coverage for
+ * every secret this app does not own the format of: a `Bearer` token under
+ * `authorization`, a session value under `cookie`, a third-party key under
+ * `apiKey`. Narrowing a false positive must not become a narrowing of what
+ * counts as a secret, so strings, objects and arrays under a credential-shaped
+ * name still redact whole, exactly as before.
+ */
+function isNeverACredential(value: unknown): boolean {
+  return typeof value === 'number' || typeof value === 'boolean'
+}
 
 /**
  * Anything shaped like a provider credential, in case one reaches a message body.
@@ -53,14 +85,24 @@ function redact(value: unknown, depth = 0): unknown {
     return {
       name: value.name,
       message: redact(value.message, depth + 1),
-      stack: isProduction() ? undefined : value.stack,
+      // The stack is redacted too, which it previously was not. Its first line
+      // is the message repeated verbatim, so scrubbing `message` alone and
+      // handing the raw stack straight through defeated the point: a credential
+      // in an error message still reached the log, one field further down.
+      //
+      // Production was never exposed — `stack` is dropped entirely there — so
+      // this was a development-only leak, into exactly the terminals and dev log
+      // drains where people paste output around. Found by the test added with
+      // this change; `logger.ts` had no coverage before it.
+      stack: isProduction() ? undefined : (redact(value.stack, depth + 1) as string | undefined),
     }
   }
 
   if (value && typeof value === 'object') {
     const output: Record<string, unknown> = {}
     for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
-      output[key] = REDACTED_KEY.test(key) ? '[redacted]' : redact(entry, depth + 1)
+      const redactByName = CREDENTIAL_KEY.test(key) && !isNeverACredential(entry)
+      output[key] = redactByName ? '[redacted]' : redact(entry, depth + 1)
     }
     return output
   }
